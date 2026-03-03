@@ -157,11 +157,11 @@ export const ConferenceProvider = ({ children }) => {
     let total = 0;
 
     // Bundle Logic for Pre-Conference Events
-    if (standardEventsCount === 1) total += 10;
-    else if (standardEventsCount > 1) total += 15;
+    if (standardEventsCount === 1) total += 300;
+    else if (standardEventsCount > 1) total += 500;
 
     // Add Main Conference Fee
-    if (hasMainConference) total += 20;
+    if (hasMainConference) total += 1500;
 
     return total; 
   };

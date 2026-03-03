@@ -62,14 +62,14 @@ const Checkout = () => {
                         {/* Price Display Logic */}
                         <span className="text-gray-300 font-mono font-bold text-right">
                           {isMainConf ? (
-                            <span className="text-pink-400 text-lg">₹20</span>
+                            <span className="text-pink-400 text-lg">₹1500</span>
                           ) : (
                             standardCount > 1 ? (
                               <span className="text-xs bg-green-900/50 text-green-300 px-2 py-1 rounded border border-green-500/30 whitespace-nowrap">
                                 Included in Bundle
                               </span>
                             ) : (
-                              "₹10"
+                              "₹300"
                             )
                           )}
                         </span>
@@ -109,7 +109,7 @@ const Checkout = () => {
                         <div className="flex justify-between items-center">
                           <span className="text-gray-400">Pre-Conference ({standardCount})</span>
                           <span className="text-green-400 font-mono">
-                            {standardCount > 1 ? "₹15 (Bundle)" : "₹10"}
+                            {standardCount > 1 ? "₹500 (Bundle)" : "₹300"}
                           </span>
                         </div>
                       )}
@@ -118,7 +118,7 @@ const Checkout = () => {
                       {hasMainConf && (
                         <div className="flex justify-between items-center">
                           <span className="text-gray-400">Main Conference</span>
-                          <span className="text-pink-400 font-mono">₹20</span>
+                          <span className="text-pink-400 font-mono">₹1500</span>
                         </div>
                       )}
                     </div>
