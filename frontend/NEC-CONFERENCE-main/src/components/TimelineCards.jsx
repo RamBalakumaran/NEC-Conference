@@ -42,7 +42,7 @@ export const TimelineCard = ({ title, description, icon }) => {
 
 • Resource persons from academia and industry conduct practical and research-oriented sessions.
 
-• Registration model: one workshop Rs.300, more than one workshop Rs.500; main conference registration is separate.
+• Pricing preference: one event Rs.10, pre-conference more than one event Rs.20, and pre-conference more than one event + 26th & 27th full access Rs.25.
   `;
 
   const hasDropdown =
@@ -143,3 +143,5 @@ export const TimelineCard = ({ title, description, icon }) => {
     </div>
   );
 };
+
+

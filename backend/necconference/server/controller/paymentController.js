@@ -2,7 +2,7 @@
 const { paymentModel } = require('../model/paymentModel');
 const User = require('../model/User');
 const Registration = require('../model/Registration');
-const { sendFailedPaymentEmail } = require('../config/email');
+const { sendFailedPaymentEmail, sendEventBookConfirmationEmail } = require('../config/email');
 const { createOrder: razorpayCreateOrder, verifyPaymentSignature } = require('../service/razorpayService');
 
 const toCanonicalStatus = (status) => {
@@ -11,6 +11,90 @@ const toCanonicalStatus = (status) => {
   if (normalized === 'failed') return 'Failed';
   if (normalized === 'refunded') return 'Refunded';
   return 'Pending';
+};
+
+const parseEvents = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+const normalizeEvents = (events) =>
+  parseEvents(events)
+    .map((ev) => (typeof ev === 'string' ? ev : (ev?.name || ev?.title || ev?.id || '')))
+    .map((name) => String(name).trim())
+    .filter(Boolean);
+
+const syncRegistrationFromPayment = async ({
+  userEmail,
+  events,
+  amount,
+  status,
+  transactionId
+}) => {
+  if (!userEmail) return;
+
+  const selectedEvents = normalizeEvents(events);
+  const now = new Date();
+  const canonicalStatus = toCanonicalStatus(status);
+
+  let reg = await Registration.findOne({
+    where: { contactEmail: userEmail },
+    order: [['updatedAt', 'DESC']]
+  });
+
+  if (reg) {
+    const existingEvents = Array.isArray(reg.selectedEvents) ? reg.selectedEvents : [];
+    const mergedEvents = Array.from(new Set([...existingEvents, ...selectedEvents]));
+    const paymentJson = reg.payment || {};
+    await reg.update({
+      status: canonicalStatus,
+      selectedEvents: mergedEvents,
+      payment: {
+        ...paymentJson,
+        paymentStatus: canonicalStatus,
+        amount: amount ?? paymentJson.amount ?? 0,
+        transactionId: transactionId || paymentJson.transactionId || null,
+        date: now
+      },
+      activityLog: [
+        ...(reg.activityLog || []),
+        {
+          action: canonicalStatus === 'Paid' ? 'Payment Paid' : canonicalStatus === 'Failed' ? 'Payment Failed' : 'Payment Pending',
+          timestamp: now
+        }
+      ]
+    });
+    return;
+  }
+
+  const user = await User.findOne({ where: { email: userEmail } });
+  await Registration.create({
+    userId: user?.id || null,
+    contactEmail: userEmail,
+    selectedEvents,
+    status: canonicalStatus,
+    payment: {
+      amount: amount || 0,
+      paymentStatus: canonicalStatus,
+      transactionId: transactionId || null,
+      date: now
+    },
+    activityLog: [
+      {
+        action: canonicalStatus === 'Paid' ? 'Payment Paid' : canonicalStatus === 'Failed' ? 'Payment Failed' : 'Payment Pending',
+        timestamp: now
+      }
+    ],
+    attendance: {}
+  });
 };
 
 // helper to respond with standardized error
@@ -68,6 +152,13 @@ const createOrder = async (req, res) => {
       paymentModel.getPendingPayment(userId, async (err, pending) => {
         if (err) return handleError(res, err);
         if (pending) {
+          await syncRegistrationFromPayment({
+            userEmail: userId,
+            events: pending.events,
+            amount: pending.amount,
+            status: 'Pending',
+            transactionId: pending.transactionId || pending.razorpayPaymentId || null
+          });
           // return existing pending order (amount in paise from razorpay)
           return res.json({
             keyId: process.env.RAZORPAY_KEY_ID,
@@ -77,12 +168,15 @@ const createOrder = async (req, res) => {
           });
         }
 
-        // determine rupee amount
-        let rupees = parseFloat(bodyAmount) || 0;
-        if (rupees <= 0) {
-          // fallback value
-          //rupees = 300; // original default
-          rupees = 10;    // use ₹10 for real-time testing
+        // determine rupee amount (allowlisted for server-side enforcement)
+        const ALLOWED_AMOUNTS = [10, 20, 25];
+        const hasBodyAmount = bodyAmount !== undefined && bodyAmount !== null && bodyAmount !== '';
+        let rupees = hasBodyAmount ? parseFloat(bodyAmount) : 10;
+        if (!Number.isFinite(rupees) || rupees <= 0) {
+          return res.status(400).json({ error: 'Invalid amount' });
+        }
+        if (!ALLOWED_AMOUNTS.includes(rupees)) {
+          return res.status(400).json({ error: 'Amount must be one of 10, 20, or 25' });
         }
         const paise = Math.round(rupees * 100);
         const currency = 'INR';
@@ -111,6 +205,14 @@ const createOrder = async (req, res) => {
         );
       });
 
+      await syncRegistrationFromPayment({
+        userEmail: userId,
+        events,
+        amount: rupees,
+        status: 'Pending',
+        transactionId: null
+      });
+
       // order.amount is paise (what razorpay returns)
       return res.json({ keyId: process.env.RAZORPAY_KEY_ID, orderId: order.id, amount: order.amount, currency: order.currency });
     });
@@ -136,20 +238,77 @@ const verify = (req, res) => {
     return res.status(400).json({ verified: false, error: check.error });
   }
 
-  paymentModel.updatePaymentStatus(razorpayOrderId, 'Paid', razorpayPaymentId, razorpayPaymentId, (err) => {
+  paymentModel.updatePaymentStatusIfCurrent(
+    razorpayOrderId,
+    'Paid',
+    'Pending',
+    razorpayPaymentId,
+    razorpayPaymentId,
+    (err) => {
     if (err) {
       console.error('Error updating status after verification:', err);
       return handleError(res, err);
     }
-    res.json({
-      verified: true,
-      orderId: razorpayOrderId,
-      paymentId: razorpayPaymentId,
-      transactionId: razorpayPaymentId,
-      status: 'Paid',
-      upiId: upiId || null
+    paymentModel.getPaymentByOrderId(razorpayOrderId, async (fetchErr, paymentRow) => {
+      if (!fetchErr && paymentRow) {
+        try {
+          await syncRegistrationFromPayment({
+            userEmail: paymentRow.userId,
+            events: paymentRow.events,
+            amount: paymentRow.amount,
+            status: 'Paid',
+            transactionId: razorpayPaymentId
+          });
+
+          const userEmail = paymentRow.userId; // in this app, userId is email
+          const user = await User.findOne({ where: { email: userEmail } });
+          const reg = await Registration.findOne({
+            where: { contactEmail: userEmail },
+            order: [['updatedAt', 'DESC']]
+          });
+          const registeredEvents = normalizeEvents(paymentRow.events);
+          const effectiveEvents = registeredEvents.length
+            ? registeredEvents
+            : (Array.isArray(reg?.selectedEvents) ? reg.selectedEvents : []);
+
+          await sendEventBookConfirmationEmail(
+            {
+              name: user?.name || reg?.contactName || 'Participant',
+              email: userEmail,
+              participantId: user?.participantId || user?.id || '-',
+              events: effectiveEvents
+            },
+            razorpayPaymentId,
+            paymentRow.amount,
+            {
+              participantId: user?.participantId || user?.id || '-',
+              name: user?.name || reg?.contactName || 'Participant',
+              email: userEmail,
+              paymentStatus: 'Paid',
+              paymentDate: new Date(),
+              events: effectiveEvents,
+              orderId: razorpayOrderId,
+              paymentId: razorpayPaymentId,
+              upiId: upiId || null,
+              currency: paymentRow.currency || 'INR'
+            }
+          );
+        } catch (syncErr) {
+          console.warn('Registration/email sync warning on verify:', syncErr?.message || syncErr);
+        }
+      }
+
+      res.json({
+        verified: true,
+        orderId: razorpayOrderId,
+        paymentId: razorpayPaymentId,
+        transactionId: razorpayPaymentId,
+        status: 'Paid',
+        upiId: upiId || null
+      });
     });
-  });
+  }
+  );
 };
 
 // POST /payment/failure
@@ -169,10 +328,14 @@ const failure = (req, res) => {
             where: { contactEmail: userEmail },
             order: [['updatedAt', 'DESC']]
           });
+          const normalizedPaymentEvents = normalizeEvents(paymentRow.events);
           if (reg) {
             const paymentJson = reg.payment || {};
             await reg.update({
               status: 'Failed',
+              selectedEvents: normalizedPaymentEvents.length
+                ? Array.from(new Set([...(Array.isArray(reg.selectedEvents) ? reg.selectedEvents : []), ...normalizedPaymentEvents]))
+                : (Array.isArray(reg.selectedEvents) ? reg.selectedEvents : []),
               payment: {
                 ...paymentJson,
                 paymentStatus: 'Failed',
@@ -184,6 +347,14 @@ const failure = (req, res) => {
                 ...(reg.activityLog || []),
                 { action: 'Payment Failed', timestamp: new Date() }
               ]
+            });
+          } else {
+            await syncRegistrationFromPayment({
+              userEmail,
+              events: paymentRow.events,
+              amount: paymentRow.amount,
+              status: 'Failed',
+              transactionId: razorpayPaymentId || null
             });
           }
 
@@ -214,3 +385,4 @@ module.exports = {
   verify,
   failure
 };
+

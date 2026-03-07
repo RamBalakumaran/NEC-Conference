@@ -2,10 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
+import { useConference } from '../context/ConferenceContext';
 import { 
   Download, Users, DollarSign, LogOut, CheckCircle, Clock, Loader2, 
   Shield, XCircle, BarChart3, TrendingUp, Eye, Filter, Mail, CalendarCheck, Check, X, Search, ChevronDown 
 } from 'lucide-react';
+
 // some event entries use `title` rather than `name` - helper to extract display text
 const getEventDisplayName = (e) => {
   if (!e) return 'Unknown';
@@ -16,7 +18,7 @@ const getEventDisplayName = (e) => {
   return String(e);
 };
 
-const CONFERENCE_EVENT_NAMES = [
+const CONFERENCE_EVENT_NAMES =[
   'Code and Connect with Arduino and ESP32',
   'EV Technology and Battery Management Systems',
   'Digital Fabrication 4.0: Smart Manufacturing',
@@ -43,6 +45,19 @@ const normalizeEventName = (name) =>
     .replace(/&/g, 'and')
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
+
+const toEventArray = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
 
 // --- Helper Components ---
 
@@ -110,30 +125,31 @@ const StatusBadge = ({ status }) => {
 // --- Main Component ---
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const { logout } = useConference();
 
   // State
   const [attendees, setAttendees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [activeUsers, setActiveUsers] = useState([]);
+  const[activeUsers, setActiveUsers] = useState([]);
   const [deptAnalytics, setDeptAnalytics] = useState({});
-  const [eventAnalytics, setEventAnalytics] = useState({});
+  const[eventAnalytics, setEventAnalytics] = useState({});
   
   // Filter States
-  const [selectedDept, setSelectedDept] = useState('All');
-  const [selectedStatus, setSelectedStatus] = useState('All');
+  const[selectedDept, setSelectedDept] = useState('All');
+  const [selectedStatus, setSelectedStatus] = useState('All'); // Show all payment statuses by default
   const [selectedEvents, setSelectedEvents] = useState(['All']);
-  const [selectedEventCount, setSelectedEventCount] = useState('All');
+  const[selectedEventCount, setSelectedEventCount] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [eventSearchTerm, setEventSearchTerm] = useState('');
-  const [exportType, setExportType] = useState('all');
+  const[exportType, setExportType] = useState('all');
   
   const [departments, setDepartments] = useState([]);
-  const [events, setEvents] = useState(CONFERENCE_EVENT_NAMES);
+  const[events, setEvents] = useState(CONFERENCE_EVENT_NAMES);
   const [stats, setStats] = useState({});
   
   const [emailLoading, setEmailLoading] = useState(false);
-  const [emailMessage, setEmailMessage] = useState(null);
+  const[emailMessage, setEmailMessage] = useState(null);
   
   const [eventsOpen, setEventsOpen] = useState(false);
   const eventsRef = useRef(null);
@@ -148,9 +164,9 @@ const AdminDashboard = () => {
     };
     document.addEventListener('click', onDocClick);
     return () => document.removeEventListener('click', onDocClick);
-  }, []);
+  },[]);
   
-  const ALL_DEPARTMENTS = ['CSE', 'ECE', 'EEE', 'Mechanical', 'Civil', 'IT', 'SH'];
+  const ALL_DEPARTMENTS =['CSE', 'ECE', 'EEE', 'Mechanical', 'Civil', 'IT', 'SH'];
 
   // Check Auth & Fetch Data
   useEffect(() => {
@@ -166,7 +182,10 @@ const AdminDashboard = () => {
       if (isAdmin !== 'true' || !token) {
         sessionStorage.removeItem('isAdmin');
         localStorage.removeItem('adminToken');
-        navigate('/admin/login');
+        // Only redirect if logout is not in progress
+        if (!isLoggingOut.current) {
+          navigate('/admin/login', { replace: true });
+        }
         return;
       }
 
@@ -175,19 +194,34 @@ const AdminDashboard = () => {
           headers: { Authorization: `Bearer ${token}` }
         }).catch(err => {
           console.error("Main data error:", err);
-          return { data: { registrations: [], stats: {} } };
+          return { data: { registrations:[], stats: {} } };
         });
 
-        const rawData = mainRes.data.registrations || [];
+        const rawData = mainRes.data.transactions || mainRes.data.registrations ||[];
 
         // Normalize/flatten backend registration objects so frontend can read fields like
         // `user.name`, `user.email`, `user.paymentAmount`, `user.paymentStatus`, etc.
         const enhancedData = rawData.map(item => {
-          const userData = item.userData || item.user || {};
+          // Extract user data - could be nested as item.user or item.userData
+          const userData = item.user || item.userData || {};
+          
+          // Front-end safeguard: Exclude Admin accounts from the table
+          if (userData.role === 'admin' || userData.isAdmin || userData.email === 'admin@gmail.com') {
+              return null;
+          }
+
           const payment = item.payment || {};
+          
+          // Normalize Payment Status safely to match dropdown string
+          let pStatus = payment.paymentStatus || payment.status || item.status || 'Pending';
+          if (pStatus === true || String(pStatus).toLowerCase() === 'paid') pStatus = 'Paid';
+          else if (String(pStatus).toLowerCase() === 'failed') pStatus = 'Failed';
+          else pStatus = 'Pending';
 
           // ensure selectedEvents always array of objects with `name`
-          const evtsRaw = item.selectedEvents || [];
+          const evtsRaw = Array.isArray(item.selectedEvents) && item.selectedEvents.length > 0
+            ? item.selectedEvents
+            : toEventArray(item.events);
           const normalizedEvents = evtsRaw.map(e => {
             const display = getEventDisplayName(e);
             return { name: display };
@@ -195,27 +229,28 @@ const AdminDashboard = () => {
 
           return {
             // Keep registration id if present, else fallback to userId or temp id
-            _id: item._id || item.userId || (userData._id ? userData._id : undefined),
+            _id: item.id || item._id || item.userId || (userData.id ? userData.id : undefined),
             // Flattened user fields used across the component
-            name: userData.name || userData.fullName || userData.firstName || '',
+            name: userData.name || userData.fullName || userData.firstName || (item.userId ? String(item.userId).split('@')[0] : ''),
             pid: userData.participantId || userData.pid || item.pid || '-',
-            email: userData.email || '',
+            email: userData.email || item.userId || '',
             phone: userData.phone || userData.mobile || '',
-            department: userData.department || userData.dept || 'Unknown',
-            year: userData.year || '',
-            college: userData.college || '',
+            // Properly extract department from nested user object
+            department: userData.department || userData.dept || item.department || 'Unknown',
+            year: userData.year || item.year || '',
+            college: userData.college || item.college || '',
 
             // Events and payment
             selectedEvents: normalizedEvents,
-            paymentAmount: payment.amount || item.paymentAmount || 0,
-            paymentStatus: payment.paymentStatus || payment.status || 'Pending',
-            transactionId: payment.transactionId || item.transactionId || 'N/A',
+            paymentAmount: payment.amount || item.amount || item.paymentAmount || 0,
+            paymentStatus: pStatus,
+            transactionId: payment.transactionId || payment.paymentId || item.transactionId || item.razorpayPaymentId || 'N/A',
 
             // Attendance and date
             attendance: item.attendance || { day1: false, day2: false, day3: false },
-            createdAt: item.registeredOn || userData.createdAt || item.createdAt || null,
+            createdAt: item.createdAt || item.registeredOn || userData.createdAt || null,
           };
-        });
+        }).filter(Boolean); // Filters out the nulls (admins)
 
         setAttendees(enhancedData);
         setStats(mainRes.data.stats || {});
@@ -228,7 +263,7 @@ const AdminDashboard = () => {
         const actualEventNames = Array.from(
           new Set(
             enhancedData
-              .flatMap((item) => item.selectedEvents || [])
+              .flatMap((item) => item.selectedEvents ||[])
               .map((e) => getEventDisplayName(e))
               .filter(Boolean)
           )
@@ -242,9 +277,9 @@ const AdminDashboard = () => {
           headers: { Authorization: `Bearer ${token}` }
         }).catch(err => {
           console.error("Active users error:", err);
-          return { data: { users: [] } };
+          return { data: { users:[] } };
         });
-        setActiveUsers(activeRes.data.users || []);
+        setActiveUsers(activeRes.data.users ||[]);
 
         const deptRes = await axios.get('http://localhost:5200/conference/api/admin/analytics/department', {
           headers: { Authorization: `Bearer ${token}` }
@@ -429,12 +464,15 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     isLoggingOut.current = true;
+    await logout();
     sessionStorage.clear();
     localStorage.removeItem('adminToken');
     localStorage.removeItem('token');
-    setTimeout(() => navigate('/admin/login'), 100);
+    localStorage.removeItem('isAdmin');
+    // Redirect to home page immediately
+    navigate('/', { replace: true });
   };
 
   const totalRevenue = stats.totalRevenue || 0;
@@ -481,9 +519,9 @@ const AdminDashboard = () => {
 
         <button
           onClick={handleLogout}
-          className="flex items-center gap-2 bg-red-500/10 text-red-400 border border-red-500/30 px-6 py-2.5 rounded-lg hover:bg-red-500/20 transition-all font-bold text-xs tracking-wider shadow-lg hover:shadow-red-900/20"
+          className="flex items-center gap-2 bg-red-500/10 text-red-400 border border-red-500/30 px-5 py-2 rounded-full hover:bg-red-500/20 transition-all font-bold text-xs tracking-wider shadow-lg hover:shadow-red-900/20 whitespace-nowrap"
         >
-          <LogOut size={16} /> LOGOUT
+          <LogOut size={15} /> LOGOUT
         </button>
       </div>
 
@@ -667,7 +705,6 @@ const AdminDashboard = () => {
         <div className="relative z-10 max-w-7xl mx-auto space-y-8">
           
           {/* Export Controls */}
-          {/* ✅ Fixed: 'relative z-50' ensures dropdowns float ON TOP of table */}
           <div className="bg-[#130720]/80 backdrop-blur-xl border border-purple-500/20 p-6 rounded-2xl shadow-2xl relative z-50">
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
               <Filter size={20} /> Export & Filter Options
@@ -864,7 +901,8 @@ const AdminDashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {displayData.slice(0, 50).map((user, idx) => {
+                  {/* FIXED: Removed the .slice() limit. The entire table data will show now. */}
+                  {displayData.map((user, idx) => {
                     const eventCount = user.selectedEvents?.length || 0;
                     return (
                       <tr key={idx} className="border-b border-purple-500/10 hover:bg-purple-500/5 transition-colors">
@@ -937,11 +975,9 @@ const AdminDashboard = () => {
               </table>
             </div>
             
-            {/* Pagination / Footer info */}
-            {displayData.length > 50 && (
-              <p className="text-xs text-gray-400 mt-4 text-center">
-                Showing 50 of {displayData.length} records
-              </p>
+            {/* Show message if empty */}
+            {displayData.length === 0 && (
+                <div className="text-center py-10 text-gray-500 italic">No registrations found matching the current filters.</div>
             )}
           </div>
         </div>
@@ -990,7 +1026,8 @@ const AdminDashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {displayData.slice(0, 100).map((user, idx) => (
+                  {/* FIXED: Also shows all rows in Attendance tab */}
+                  {displayData.map((user, idx) => (
                     <tr key={idx} className="border-b border-purple-500/10 hover:bg-purple-500/5 transition-colors">
                       <td className="py-3 px-4">
                         <div className="font-medium text-white">{user.name}</div>
@@ -1029,4 +1066,3 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-

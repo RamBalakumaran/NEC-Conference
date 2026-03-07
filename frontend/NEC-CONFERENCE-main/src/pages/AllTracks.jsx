@@ -7,6 +7,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Particle from '../components/Particle'; 
 
 const profileImage = (fileName) => `${import.meta.env.BASE_URL}Resource%20Person/${encodeURIComponent(fileName)}`;
+const preloadImage = (src) => {
+  if (!src) return;
+  const img = new Image();
+  img.src = src;
+};
 
 // --- 1. PRE-CONFERENCE WORKSHOP DATA (MARCH 25) ---
 const workshopData = [
@@ -69,10 +74,10 @@ const workshopData = [
     title: "Digital Fabrication 4.0: Smart Manufacturing",
     shortDesc: "Data-driven manufacturing workflow aligned with Industry 4.0.",
     color: "from-red-500 to-rose-600",
-    date: "March 25, 2026",
-    time: "01:30 PM - 03:30 PM",
-    start: "2026-03-25T13:30:00",
-    end: "2026-03-25T15:30:00",
+    date: "March 14, 2026",
+    time: "09:30 AM - 11:00 AM",
+    start: "2026-03-14T09:30:00",
+    end: "2026-03-14T11:00:00",
     resourcePersons: [
       { name: "Dr. K. Thoufiq Mohammed", designation: "Additive Manufacturing Expert", image: profileImage("Dr.K.Thoufiq Mohammed.webp"), linkedin: "https://www.linkedin.com/in/dr-k-thoufiq-mohammed-1207b1156" }
     ],
@@ -80,7 +85,8 @@ const workshopData = [
       "An integrated, data-driven workshop on the digital thread from design to production in smart manufacturing.",
       "Includes guided practical work in CAD preparation, slicing, build execution, post-processing, and rapid inspection."
     ],
-    topics: ["Design for additive manufacturing", "Process parameterization", "FDM and DLP workflow", "Production data capture", "Smart factory analytics"]
+    topics: ["Design for additive manufacturing", "Process parameterization", "FDM and DLP workflow", "Production data capture", "Smart factory analytics"],
+    venue: "CAD Lab - Mechanical Engineering Department"
   },
   {
     id: "mech-2",
@@ -88,10 +94,11 @@ const workshopData = [
     title: "CAD to Cut: Wirecut EDM Workshop",
     shortDesc: "Bridge the gap between digital design and precision manufacturing.",
     color: "from-red-400 to-orange-500",
-    date: "March 25, 2026",
-    time: "03:45 PM - 05:45 PM",
-    start: "2026-03-25T15:45:00",
-    end: "2026-03-25T17:45:00",
+    date: "March 14, 2026",
+    time: "02:00 PM - 03:30 PM",
+    start: "2026-03-14T14:00:00",
+    end: "2026-03-14T15:30:00",
+    
     resourcePersons: [
       { name: "Dr. I. Sankar", designation: "Precision Engineering Expert", image: profileImage("Dr.I.Sankar.webp"), linkedin: "https://www.linkedin.com/in/dr-i-sankar-4496a7134" }
     ],
@@ -99,7 +106,8 @@ const workshopData = [
       "Hands-on technical training to convert CAD profiles into machine-ready programs for Wirecut EDM.",
       "Covers machine setup, parameter selection, and accurate cutting of conductive materials."
     ],
-    topics: ["Wire EDM working principle", "CAD profile creation", "Machine setup and parameters", "Programming workflow", "High-precision cutting"]
+    topics: ["Wire EDM working principle", "CAD profile creation", "Machine setup and parameters", "Programming workflow", "High-precision cutting"],
+    venue: "Workshop - Mechanical Engineering Department"
   },
   {
     id: "mech-3",
@@ -230,7 +238,7 @@ const workshopData = [
   {
     id: "cse-1",
     dept: "CSE",
-    title: "Quantum Computing: From Qubits to Contemporary Applications",
+    title: "Quantum Computing: From Qubits to Contemporary Applications (Virtual Session)",
     shortDesc: "Quantum foundations, technologies, and practical applications.",
     color: "from-purple-500 to-indigo-500",
     date: "March 25, 2026",
@@ -454,7 +462,7 @@ const detailedWorkshopOverrides = {
   },
   "mech-1": {
     resourcePersons: [
-      { name: "Dr. K. Thoufiq Mohammed", designation: "Additive Manufacturing Expert", image: profileImage("Dr.K.Thoufiq Mohammed.webp"), linkedin: "https://www.linkedin.com/in/dr-k-thoufiq-mohammed-1207b1156?utm_source=share_via&utm_content=profile&utm_medium=member_android" }
+      { name: "Dr. I. Sankar", designation: "Precision Engineering Expert", image: profileImage("Dr.I.Sankar.webp"), linkedin: "https://www.linkedin.com/in/dr-i-sankar-4496a7134?utm_source=share_via&utm_content=profile&utm_medium=member_android" }
     ],
     description: [
       "Digital Fabrication 4.0 is presented as an integrated, data-driven manufacturing workflow aligned with Industry 4.0.",
@@ -463,8 +471,9 @@ const detailedWorkshopOverrides = {
     ]
   },
   "mech-2": {
+    
     resourcePersons: [
-      { name: "Dr. I. Sankar", designation: "Precision Engineering Expert", image: profileImage("Dr.I.Sankar.webp"), linkedin: "https://www.linkedin.com/in/dr-i-sankar-4496a7134?utm_source=share_via&utm_content=profile&utm_medium=member_android" }
+      { name: "Dr. K. Thoufiq Mohammed", designation: "Additive Manufacturing Expert", image: profileImage("Dr.K.Thoufiq Mohammed.webp"), linkedin: "https://www.linkedin.com/in/dr-k-thoufiq-mohammed-1207b1156?utm_source=share_via&utm_content=profile&utm_medium=member_android" }
     ],
     description: [
       "CAD to Cut: Wirecut EDM Workshop is a hands-on training program that bridges digital design and precision manufacturing.",
@@ -563,7 +572,7 @@ const detailedWorkshopOverrides = {
     ]
   },
   "cse-1": {
-    title: "Quantum Computing: From Qubits to Contemporary Applications",
+    title: "Quantum Computing: From Qubits to Contemporary Applications (Virtual Session)",
     resourcePersons: [
       { name: "Dr. Krishnamoorthy Dinesh", designation: "Assistant Professor, IIT Palakkad", image: profileImage("Dr.Krishnamoorthy Dinesh.webp"), linkedin: "https://www.linkedin.com/in/dinesh-krishnamoorthy-21bb641b?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" }
     ],
@@ -710,6 +719,19 @@ const formattedWorkshops = workshopData.map(track => ({
     };
   }, [selectedEvent]);
 
+  useEffect(() => {
+    // Preload speaker avatars so modal opens without waiting for image fetch.
+    const avatarUrls = Array.from(
+      new Set(
+        workshopData.flatMap((event) =>
+          (event.resourcePersons || []).map((person) => person.image).filter(Boolean)
+        )
+      )
+    );
+
+    avatarUrls.forEach(preloadImage);
+  }, []);
+
   if (!user) return null;
 
   useEffect(() => {
@@ -774,7 +796,11 @@ const formattedWorkshops = workshopData.map(track => ({
         <img
           src={person.image}
           alt={person.name}
-          loading="lazy"
+          loading="eager"
+          decoding="async"
+          fetchPriority="high"
+          width={80}
+          height={80}
           onError={() => setHasError(true)}
           className="w-full h-full rounded-full object-cover bg-slate-100"
         />
@@ -1118,8 +1144,8 @@ const formattedWorkshops = workshopData.map(track => ({
               </div>
 
               {/* Modal Footer */}
-              <div className="p-4 border-t border-white/10 bg-[#0b0b10] flex justify-end gap-3 shrink-0">
-                  <button onClick={() => setSelectedEvent(null)} className="px-5 py-2 rounded-lg text-gray-400 text-sm font-bold hover:text-white hover:bg-white/5 transition-colors">
+              <div className="p-4 border-t border-white/10 bg-[#0b0b10] flex flex-col sm:flex-row sm:justify-end gap-3 shrink-0">
+                  <button onClick={() => setSelectedEvent(null)} className="w-full sm:w-auto px-5 py-2 rounded-lg text-gray-400 text-sm font-bold hover:text-white hover:bg-white/5 transition-colors">
                       Close
                   </button>
                   <button 
@@ -1128,7 +1154,7 @@ const formattedWorkshops = workshopData.map(track => ({
                           if (!isInCart) handleRegister(selectedEvent);
                       }}
                       disabled={cart.some(item => item.id === selectedEvent?.id)}
-                      className={`px-6 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${
+                      className={`w-full sm:w-auto px-6 py-2 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${
                           cart.some(item => item.id === selectedEvent?.id)
                             ? 'bg-green-600 text-white cursor-not-allowed'
                             : selectedEvent.id === 'icodses-2026'

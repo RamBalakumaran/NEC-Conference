@@ -115,7 +115,18 @@ const navItems = [
                   <span className="text-white text-xs font-bold">{user.name.split(' ')[0]}</span>
                   <span className="text-purple-400 text-[10px] uppercase">{user.department}</span>
                 </div>
-                <button onClick={async () => { await logout(); navigate('/login'); }} title="Logout" className="text-white hover:text-red-500">
+                <button 
+                  onClick={async () => { 
+                    // Check if user is admin - if so, don't logout here
+                    const isAdmin = sessionStorage.getItem('isAdmin') === 'true';
+                    if (!isAdmin) {
+                      await logout(); 
+                      navigate('/login'); 
+                    }
+                  }} 
+                  title="Logout" 
+                  className="text-white hover:text-red-500"
+                >
                   <LogOut size={18} />
                 </button>
               </>

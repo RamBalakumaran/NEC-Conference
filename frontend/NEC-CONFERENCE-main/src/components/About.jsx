@@ -37,7 +37,7 @@ function About() {
         {
           id: 5,
           title: "Registration & Participation", 
-          description: "Pre-conference fees are bundled: one workshop Rs.300, more than one workshop Rs.500. Main conference registration applies separately.",
+          description: "Pricing preference: one event Rs.10, pre-conference more than one event Rs.20, and pre-conference more than one event + 26th & 27th full access Rs.25.",
           date: "Open Now",
           icon: <FaRegLightbulb size={30} color="white" />
         },
@@ -98,3 +98,4 @@ function About() {
   }
   
   export default About;
+

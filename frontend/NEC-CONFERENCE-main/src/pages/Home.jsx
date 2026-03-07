@@ -99,7 +99,7 @@ const trackData = [
     shortDesc: "Integrated, data-driven manufacturing workflow aligned with Industry 4.0.",
     color: "from-red-500 to-rose-600",
     resourcePersons: [
-      { name: "Dr. K. Thoufiq Mohammed", designation: "Additive Manufacturing Expert", image: profileImage("Dr.K.Thoufiq Mohammed.webp"), linkedin: "https://www.linkedin.com/in/dr-k-thoufiq-mohammed-1207b1156?utm_source=share_via&utm_content=profile&utm_medium=member_android" }
+      { name: "Dr. I. Sankar", designation: "Precision Engineering Expert", image: profileImage("Dr.I.Sankar.webp"), linkedin: "https://www.linkedin.com/in/dr-i-sankar-4496a7134?utm_source=share_via&utm_content=profile&utm_medium=member_android" }
     ],
     description: [
       "An integrated, data-driven workshop on the digital thread from design to production in smart manufacturing.",
@@ -114,8 +114,9 @@ const trackData = [
     title: "CAD to Cut: Wirecut EDM Workshop",
     shortDesc: "Bridge the gap between digital design and precision manufacturing.",
     color: "from-red-400 to-orange-500",
+    
     resourcePersons: [
-      { name: "Dr. I. Sankar", designation: "Precision Engineering Expert", image: profileImage("Dr.I.Sankar.webp"), linkedin: "https://www.linkedin.com/in/dr-i-sankar-4496a7134?utm_source=share_via&utm_content=profile&utm_medium=member_android" }
+      { name: "Dr. K. Thoufiq Mohammed", designation: "Additive Manufacturing Expert", image: profileImage("Dr.K.Thoufiq Mohammed.webp"), linkedin: "https://www.linkedin.com/in/dr-k-thoufiq-mohammed-1207b1156?utm_source=share_via&utm_content=profile&utm_medium=member_android" }
     ],
     description: [
       "“CAD to Cut: Wirecut EDM Workshop” is a hands-on technical training program designed to bridge the gap between digital design and precision manufacturing.",
@@ -306,7 +307,7 @@ const trackData = [
   {
     id: "cse-1",
     dept: "CSE",
-    title: "Quantum Computing: Concepts & Applications",
+    title: "Quantum Computing: Concepts & Applications (Virtual Session )",
     shortDesc: "Unlocking the future of computational power.",
     color: "from-purple-500 to-indigo-500",
     resourcePersons: [
@@ -503,8 +504,8 @@ const detailedTrackOverrides = {
       "Enhance practical skills in hardware-software integration."
     ]
   },
-  "mech-1": { resourcePersons: [{ name: "Dr. K. Thoufiq Mohammed", designation: "Additive Manufacturing Expert", image: profileImage("Dr.K.Thoufiq Mohammed.webp"), linkedin: "https://www.linkedin.com/in/dr-k-thoufiq-mohammed-1207b1156?utm_source=share_via&utm_content=profile&utm_medium=member_android" }] },
-  "mech-2": { resourcePersons: [{ name: "Dr. I. Sankar", designation: "Precision Engineering Expert", image: profileImage("Dr.I.Sankar.webp"), linkedin: "https://www.linkedin.com/in/dr-i-sankar-4496a7134?utm_source=share_via&utm_content=profile&utm_medium=member_android" }] },
+  "mech-1": {  resourcePersons: [{ name: "Dr. I. Sankar", designation: "Precision Engineering Expert", image: profileImage("Dr.I.Sankar.webp"), linkedin: "https://www.linkedin.com/in/dr-i-sankar-4496a7134?utm_source=share_via&utm_content=profile&utm_medium=member_android" }] },
+  "mech-2": {resourcePersons: [{ name: "Dr. K. Thoufiq Mohammed", designation: "Additive Manufacturing Expert", image: profileImage("Dr.K.Thoufiq Mohammed.webp"), linkedin: "https://www.linkedin.com/in/dr-k-thoufiq-mohammed-1207b1156?utm_source=share_via&utm_content=profile&utm_medium=member_android" }] },
   "mech-3": { resourcePersons: [{ name: "Dr. M. Vivekanandan", designation: "Immersive Technology Expert", image: profileImage("Dr.M.Vivekanandan.webp"), linkedin: "https://www.linkedin.com/in/dr-m-vivekanandan-a714504b?utm_source=share_via&utm_content=profile&utm_medium=member_android" }] },
   "civil-2": { resourcePersons: [{ name: "Dr. Gagarin Guru", designation: "Environmental and Water Resources Expert", image: profileImage("Mr.Gagarin guru.webp"), linkedin: "https://www.linkedin.com/in/gagarin-guru-5125ab53/" }] },
   "it-1": {
@@ -516,7 +517,7 @@ const detailedTrackOverrides = {
   },
   "it-2": { resourcePersons: [{ name: "Dr. Dinesh Raj", designation: "IoT and ML Specialist", image: profileImage("Dr.Dinesh Raj.webp"), linkedin: "https://www.linkedin.com/in/dr-dinesh-raj-5aa7676a?utm_source=share_via&utm_content=profile&utm_medium=member_android" }] },
   "cse-1": {
-    title: "Quantum Computing: From Qubits to Contemporary Applications",
+    title: "Quantum Computing: From Qubits to Contemporary Applications (Virtual session)",
     resourcePersons: [{ name: "Dr. Krishnamoorthy Dinesh", designation: "Assistant Professor, IIT Palakkad", image: profileImage("Dr.Krishnamoorthy Dinesh.webp"), linkedin: "https://www.linkedin.com/in/dinesh-krishnamoorthy-21bb641b?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" }]
   },
   "cse-2": {
@@ -598,7 +599,7 @@ function Home() {
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 1.8, ease: [0.34, 1.56, 0.64, 1] }}
             >
-              ICoDSES - NEC <br></br>Pre-CONFERENCE '26
+              ICoDSES - NEC <br></br>Pre-CONFERENCE '26<br></br>(Student Symposium)
             </motion.div>
 
             <motion.div
@@ -622,7 +623,7 @@ function Home() {
             </motion.p>
 
             {/* SHOW ONLY WHEN NOT LOGGED IN */}
-            {!user && (
+            {/* {!user && (
               <motion.div 
                 initial={{ opacity: 0, y: 20 }} 
                 animate={{ opacity: 1, y: 0 }} 
@@ -658,7 +659,7 @@ function Home() {
                   </button>
                 </div>
               </motion.div>
-            )}
+            )} */}
           </div>
 
           {/* STATS ALWAYS VISIBLE */}
@@ -703,10 +704,7 @@ function Home() {
                     and sustainable practices shaping the future of engineering.
                   </p>
                   <p>
-                    Participants will engage in <strong>Wirecut EDM</strong> and <strong>Arduino & Code Programming</strong>, 
-                    gaining practical skills in IoT and modern engineering. Experts will lead discussions on 
-                    <strong> AR/XR in Design</strong>, <strong>AI for SaaS platforms</strong>, and preparing engineers 
-                    for the evolving tech landscape. Join us for a transformative learning experience at the forefront 
+                    Join us for a transformative learning experience at the forefront 
                     of technology and sustainability.
                   </p>
                 </div>
@@ -719,21 +717,14 @@ function Home() {
         
         <VisitorCounter />
         <ScrollingNews />
-        <OnlineEvents />
         
-        {/* ABOUT SECTION */}
-        <motion.section className="relative mt-20 sm:mt-32 z-10">
-          <div className="container mx-auto px-4 relative z-10">
-            <About />
-          </div>
-        </motion.section>
 
 
         {/* CONFERENCE TRACKS - UPDATED GRID SECTION */}
         <motion.section className="relative mt-24 mb-24 z-10">
           <div className="container mx-auto px-4 relative z-10 text-center">
             <h1 className="text-7xl font-iceland font-bold bg-gradient-to-b from-[#e0aaff] to-[#5a189a] bg-clip-text text-transparent mb-2">
-              CONFERENCE TRACKS
+             Pre - CONFERENCE TRACKS
             </h1>
             <div className="h-0.5 w-48 bg-gradient-to-r from-transparent via-[#9d4edd] to-transparent mx-auto mt-4 mb-8" />
             
@@ -770,6 +761,12 @@ function Home() {
             </div>
           </div>
         </motion.section>
+        {/* ABOUT SECTION */}
+        {/* <motion.section className="relative mt-20 sm:mt-32 z-10">
+          <div className="container mx-auto px-4 relative z-10">
+            <About />
+          </div>
+        </motion.section> */}
 
         {/* TRACK DETAIL MODAL */}
         <AnimatePresence>
@@ -940,10 +937,10 @@ function Home() {
                 </div>
                 
                 {/* Footer / CTA */}
-                <div className="p-4 border-t border-white/10 bg-black/40 backdrop-blur-md flex justify-end gap-3">
+                <div className="p-4 border-t border-white/10 bg-black/40 backdrop-blur-md flex flex-col sm:flex-row sm:justify-end gap-3">
                   <button 
                     onClick={() => setSelectedTrack(null)}
-                    className="px-4 py-2 rounded-lg text-gray-400 text-sm font-bold hover:text-white transition-colors"
+                    className="w-full sm:w-auto px-4 py-2 rounded-lg text-gray-400 text-sm font-bold hover:text-white transition-colors"
                   >
                     Close
                   </button>
@@ -952,7 +949,7 @@ function Home() {
                       setSelectedTrack(null);
                       navigate(user ? '/dashboard' : '/signup');
                     }}
-                    className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg text-white font-bold text-sm hover:shadow-[0_0_20px_rgba(219,39,119,0.4)] transition-all flex items-center gap-2"
+                    className="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg text-white font-bold text-sm hover:shadow-[0_0_20px_rgba(219,39,119,0.4)] transition-all flex items-center justify-center gap-2"
                   >
                     Register Now <ArrowRight size={14} />
                   </button>

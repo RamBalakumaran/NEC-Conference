@@ -1,128 +1,260 @@
 const UserData = require("../model/User"); 
 const Registration = require("../model/Registration");
-const ActionLog = require('../model/ActionLog'); // Optional: If you track admin actions
+const ActionLog = require('../model/ActionLog'); 
 const ExcelJS = require('exceljs');
 const { sendRegistrationReminderEmail } = require('../config/email');
 const { Op } = require('sequelize');
 const { sequelize } = require('../model');
 const { assignParticipantIdToUser } = require('../service/participantIdService');
+const { paymentModel } = require('../model/paymentModel');
 
 const eventNameOf = (ev) => (typeof ev === 'string' ? ev : (ev?.name || ev?.title || null));
+const canonicalPaymentStatus = (value) => {
+    const normalized = String(value || '').toLowerCase();
+    if (value === true || normalized === 'paid' || normalized === 'captured') return 'Paid';
+    if (normalized === 'failed') return 'Failed';
+    return 'Pending';
+};
+const parsePaymentEvents = (value) => {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') {
+        try {
+            const parsed = JSON.parse(value);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+    return [];
+};
+const paymentStatusToRegistrationStatus = (value) => {
+    const normalized = String(value || '').toLowerCase();
+    if (normalized === 'paid') return 'Paid';
+    if (normalized === 'failed') return 'Failed';
+    return 'Pending';
+};
 
 // --- 1. Get All Registrations (Dashboard Main Data) ---
+// --- 1. Get All Registrations & Transactions ---
 const getAllRegistrations = async (req, res) => {
     try {
         const { from, to, department, status } = req.query;
-        const whereUser = {};
         
-        // Date Filter on User Creation
+        // 1. Prepare Filters (For the User View)
+        const whereUser = {
+            role: { [Op.not]: 'admin' }, 
+            email: { [Op.notLike]: '%admin%' } 
+        };
+        
+        // Date Filter
         if (from || to) {
             whereUser.createdAt = {};
             if (from) whereUser.createdAt[Op.gte] = new Date(from);
             if (to) whereUser.createdAt[Op.lte] = new Date(to);
         }
-        // Dept Filter
         if (department && department !== 'All') whereUser.department = department;
         
-        // 1. Get Users based on filters
-        const allUsers = await UserData.findAll({
+        // 2. Fetch Data
+        // A. Get Users (Filtered - No Admins)
+        const tableUsers = await UserData.findAll({
             where: whereUser,
             attributes: ['id', 'name', 'email', 'participantId', 'phone', 'department', 'year', 'college', 'role', 'isAdmin', 'createdAt', 'lastLogin'],
             order: [['lastLogin', 'DESC'], ['createdAt', 'DESC']],
             raw: false
         });
 
-        // Ensure non-admin users always have participantId persisted.
-        for (const user of allUsers) {
-            try {
-                if (!user?.participantId) {
-                    await assignParticipantIdToUser(user);
-                }
-            } catch (pidErr) {
-                console.warn(`PID assignment skipped for user ${user?.id}:`, pidErr?.message || pidErr);
-            }
-        }
-        
-        // 2. Get All Registrations to merge
-        const registrations = await Registration.findAll({
-            include: [{ model: UserData, as: 'user', attributes: ['id','name','email','participantId'] }],
+        // B. Registrations table (used for user-level/attendance view)
+        const allRegistrations = await Registration.findAll({
+            include: [{ model: UserData, as: 'user', attributes: ['id','name','email','participantId','phone','department','year','college','role'] }],
+            order: [['createdAt', 'DESC']], // Newest first
             raw: true,
             nest: true
         });
+        const registrationAttempts = allRegistrations.filter(r =>
+            r.user?.role !== 'admin' &&
+            !String(r.user?.email || '').includes('admin')
+        );
+
+        // C. Payments table (attempt-level list for Paid/Pending/Failed)
+        const paymentAttempts = await new Promise((resolve) => {
+            paymentModel.getAllPayments((err, rows) => {
+                if (err) {
+                    console.error("Payment fetch error:", err);
+                    return resolve([]);
+                }
+                return resolve(rows || []);
+            });
+        });
+
+        const usersByEmail = new Map(
+            tableUsers
+                .map((u) => u.get({ plain: true }))
+                .filter((u) => u?.email)
+                .map((u) => [String(u.email).toLowerCase(), u])
+        );
+
+        const transactionList = paymentAttempts
+            .map((p) => {
+                const email = String(p.userId || '').trim();
+                const user = usersByEmail.get(email.toLowerCase()) || null;
+                if ((user?.role || '').toLowerCase() === 'admin' || email.toLowerCase().includes('admin')) {
+                    return null;
+                }
+
+                return {
+                    id: p.id,
+                    userId: email,
+                    user: user
+                        ? {
+                            id: user.id,
+                            name: user.name,
+                            email: user.email,
+                            participantId: user.participantId,
+                            phone: user.phone,
+                            department: user.department,
+                            year: user.year,
+                            college: user.college,
+                            role: user.role
+                        }
+                        : null,
+                    events: parsePaymentEvents(p.events),
+                    amount: Number(p.amount || 0),
+                    currency: p.currency || 'INR',
+                    razorpayOrderId: p.razorpayOrderId || null,
+                    razorpayPaymentId: p.razorpayPaymentId || null,
+                    transactionId: p.transactionId || null,
+                    status: canonicalPaymentStatus(p.status),
+                    createdAt: p.createdAt,
+                    updatedAt: p.updatedAt
+                };
+            })
+            .filter(Boolean);
+
+        // D. Backfill registrations table from latest payment row when selectedEvents is empty.
+        const latestPaymentByEmail = new Map();
+        for (const txn of transactionList) {
+            const email = String(txn.userId || '').toLowerCase();
+            if (!email || latestPaymentByEmail.has(email)) continue;
+            latestPaymentByEmail.set(email, txn);
+        }
+
+        for (const [email, txn] of latestPaymentByEmail.entries()) {
+            const reg = await Registration.findOne({
+                where: { contactEmail: email },
+                order: [['updatedAt', 'DESC']]
+            });
+            if (!reg) continue;
+
+            const existingEvents = Array.isArray(reg.selectedEvents) ? reg.selectedEvents : [];
+            const paymentEvents = parsePaymentEvents(txn.events);
+            if (existingEvents.length > 0 || paymentEvents.length === 0) continue;
+
+            const mergedEvents = paymentEvents
+                .map((ev) => eventNameOf(ev) || String(ev || '').trim())
+                .filter(Boolean);
+            const paymentJson = reg.payment || {};
+            await reg.update({
+                selectedEvents: mergedEvents,
+                status: paymentStatusToRegistrationStatus(txn.status),
+                payment: {
+                    ...paymentJson,
+                    amount: txn.amount ?? paymentJson.amount ?? 0,
+                    paymentStatus: paymentStatusToRegistrationStatus(txn.status),
+                    transactionId: txn.transactionId || txn.razorpayPaymentId || paymentJson.transactionId || null,
+                    date: new Date()
+                }
+            });
+        }
+
+        // 3. Calculate Global Stats
+        const totalUsersCount = await UserData.count({ where: { role: { [Op.not]: 'admin' } } });
+        const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000);
+        const activeUsersCount = await UserData.count({
+            where: { 
+                lastLogin: { [Op.gte]: thirtyMinsAgo },
+                role: { [Op.not]: 'admin' }
+            }
+        });
+
+        let stats = {
+            totalUsers: totalUsersCount,
+            activeNow: activeUsersCount,
+            registered: 0,
+            pendingPayment: 0,
+            paymentFailed: 0,
+            totalRevenue: 0
+        };
+
+        transactionList.forEach((txn) => {
+            const pStatus = canonicalPaymentStatus(txn.status);
+            const amount = parseFloat(txn.amount || 0);
+
+            if (pStatus === 'Paid') {
+                stats.registered++;
+                stats.totalRevenue += amount;
+            }
+            else if (pStatus === 'Failed') {
+                stats.paymentFailed++;
+            }
+            else {
+                stats.pendingPayment++;
+            }
+        });
+
+        // 4. Prepare User-Based View (Merged Data)
+        for (const user of tableUsers) {
+            try { if (!user?.participantId) await assignParticipantIdToUser(user); } catch (e) {}
+        }
         
-        // 3. Merge Data
-        const mergedData = allUsers.map((userRow) => {
+        const mergedData = tableUsers.map((userRow) => {
             const user = userRow.get({ plain: true });
-            // Match Registration to User. Sequelize include provided `user` object nested.
-            const userReg = registrations.find(r => 
+            
+            // Find all attempts for this user
+            const userRecords = registrationAttempts.filter(r => 
                 (r.user && r.user.id.toString() === user.id.toString()) || 
                 (r.userData && r.userData.email === user.email)
             );
 
-            const resolvedPid =
-                user.participantId ||
-                userReg?.user?.participantId ||
-                userReg?.userData?.participantId ||
-                userReg?.userData?.pid ||
-                '-';
+            // Sort: Paid first, then latest date
+            userRecords.sort((a, b) => {
+                const statusA = (a.payment?.paymentStatus === true || String(a.payment?.paymentStatus).toLowerCase() === 'paid') ? 1 : 0;
+                const statusB = (b.payment?.paymentStatus === true || String(b.payment?.paymentStatus).toLowerCase() === 'paid') ? 1 : 0;
+                return statusB - statusA;
+            });
 
+            const userReg = userRecords.length > 0 ? userRecords[0] : null;
+            const resolvedPid = user.participantId || userReg?.user?.participantId || '-';
             const paymentStatus = userReg?.payment?.paymentStatus 
                 ? (userReg.payment.paymentStatus === true ? 'Paid' : userReg.payment.paymentStatus) 
                 : 'Pending';
             
-            // Filter by Payment Status if requested
             if (status && status !== 'All' && paymentStatus !== status) return null;
             
             return {
-                _id: userReg ? userReg.id : `temp_${user.id}`, // Use Reg ID if exists, else User ID
+                _id: userReg ? userReg.id : `temp_${user.id}`,
                 userId: user.id,
-                userData: {
-                    name: user.name,
-                    email: user.email,
-                    participantId: resolvedPid,
-                    phone: user.phone,
-                    department: user.department,
-                    year: user.year,
-                    college: user.college,
-                    role: user.role,
-                },
-                pid: resolvedPid,
+                userData: { ...user, participantId: resolvedPid },
                 selectedEvents: userReg?.selectedEvents || [],
                 payment: {
                     amount: userReg?.payment?.amount || 0,
                     paymentStatus: paymentStatus,
                     transactionId: userReg?.payment?.transactionId || 'N/A'
                 },
-                attendance: userReg?.attendance || { day1: false, day2: false, day3: false },
                 registeredOn: user.createdAt
             };
-        }).filter(Boolean); // Remove nulls from status filter
-        
-        const stats = calculateStats(mergedData);
+        }).filter(Boolean); 
         
         res.status(200).json({
             stats,
-            registrations: mergedData,
+            registrations: mergedData,    // User View
+            transactions: transactionList, // <--- NEW: Entire Payment Table Data
             total: mergedData.length
         });
+
     } catch (error) {
         console.error("Admin Fetch Error:", error);
         res.status(500).json({ message: "Server Error fetching data" });
     }
-};
-
-const calculateStats = (data) => {
-    const now = Date.now();
-    const thirtyMinsAgo = new Date(now - 30 * 60 * 1000);
-    return {
-        totalUsers: data.length,
-        // Assuming lastLogin is on user object, estimating active based on recent reg/update for now
-        activeNow: 0, 
-        registered: data.filter(u => u.payment.paymentStatus === 'Paid').length,
-        pendingPayment: data.filter(u => u.payment.paymentStatus === 'Pending').length,
-        paymentFailed: data.filter(u => u.payment.paymentStatus === 'Failed').length,
-        totalRevenue: data.filter(u => u.payment.paymentStatus === 'Paid').reduce((sum, u) => sum + (u.payment.amount || 0), 0),
-    };
 };
 
 // --- 2. Mark Attendance ---
@@ -347,9 +479,6 @@ const getLogs = async (req, res) => {
 
 // --- 10. Export Registrations Excel ---
 const exportRegistrationsToExcel = async (req, res) => {
-    // Usually handled by frontend using the JSON data, but if backend generation is needed:
-    // Implementation involves creating a buffer and sending it.
-    // For now, frontend export (which you implemented) is often better for load.
     res.status(200).json({ message: "Use Frontend Export" });
 };
 
@@ -366,4 +495,3 @@ module.exports = {
     getLogs,
     exportRegistrationsToExcel
 };
-

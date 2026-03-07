@@ -150,20 +150,26 @@ export const ConferenceProvider = ({ children }) => {
 
     // 1. Check if Main Conference is selected
     const hasMainConference = currentCart.some(item => item.id === MAIN_CONF_ID);
-    
+
     // 2. Count other (Pre-conference) events
     const standardEventsCount = currentCart.filter(item => item.id !== MAIN_CONF_ID).length;
+
+    // Combo override:
+    // more than one pre-conference event + main conference (26th & 27th) => flat 25
+    if (hasMainConference && standardEventsCount > 1) {
+      return 25;
+    }
 
     let total = 0;
 
     // Bundle Logic for Pre-Conference Events
-    if (standardEventsCount === 1) total += 300;
-    else if (standardEventsCount > 1) total += 500;
+    if (standardEventsCount === 1) total += 10;
+    else if (standardEventsCount > 1) total += 20;
 
     // Add Main Conference Fee
-    if (hasMainConference) total += 1500;
+    if (hasMainConference) total += 25;
 
-    return total; 
+    return total;
   };
 
   return (

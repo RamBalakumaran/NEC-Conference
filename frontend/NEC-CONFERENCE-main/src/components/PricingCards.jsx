@@ -23,15 +23,15 @@ const PricingCards = () => {
     >
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12 max-w-6xl mx-auto">
         
-        {/* --- PLAN 1: STANDARD (25th Pre-Conference) --- */}
-        <motion.div variants={cardVariants} className="relative group">
-          <div className="absolute -inset-0.5 bg-gradient-to-b from-purple-500 to-blue-500 rounded-2xl blur opacity-20 group-hover:opacity-60 transition duration-500"></div>
+        {/* --- PLAN 1: ONE EVENT (25th Pre-Conference) --- */}
+        <motion.div variants={cardVariants} className="relative group flex flex-col h-full">
+          <div className="absolute -inset-0.5 bg-gradient-to-b from-purple-500 to-blue-500 rounded-2xl blur opacity-20 transition duration-500"></div>
           
-          <div className="relative h-full bg-[#0f0518] bg-opacity-90 backdrop-blur-xl border border-white/10 rounded-2xl p-8 flex flex-col hover:border-purple-500/50 transition-colors duration-300">
+          <div className="relative flex-1 bg-[#0f0518] bg-opacity-90 backdrop-blur-xl border border-white/10 rounded-2xl p-8 flex flex-col hover:border-purple-500/30 transition-colors duration-300">
             
             <div className="mb-6">
               <h3 className="text-2xl font-bold font-orbitron text-white mb-2">
-                Standard Pass
+                One Event Pass
               </h3>
               <p className="text-purple-300 text-sm">
                 25th Pre-Conference Access
@@ -47,13 +47,14 @@ const PricingCards = () => {
 
             <ul className="space-y-4 mb-8 flex-1">
               {[
-                "Access to 1 Technical Track (25th)",
-                "Participation Certificate",
-                "Lunch & Refreshments",
-                "Standard Conference Kit"
+                "Pre-Conference: One Event Access (25th)",
+                "Workshop kit",
+                "Softcopy of the workshop material & conference proceedings",
+                "Tea & snacks",
+                "E certificate"
               ].map((feature, index) => (
                 <li key={index} className="flex items-start gap-3 text-gray-300">
-                  <div className="mt-1 bg-purple-900/50 p-1 rounded-full">
+                  <div className="mt-1 bg-purple-900/50 p-1 rounded-full shrink-0">
                     <Check size={14} className="text-purple-400" />
                   </div>
                   <span className="text-sm">{feature}</span>
@@ -61,18 +62,18 @@ const PricingCards = () => {
               ))}
             </ul>
 
-            {/* Added flex centering to this button too for consistency */}
-            <button className="w-full py-4 rounded-xl border border-purple-500/30 text-white font-bold font-orbitron hover:bg-purple-900/20 transition-all duration-300 flex items-center justify-center gap-2">
-              Choose Standard
-            </button>
+            {/* Rendered as static text instead of a button */}
+            <div className="w-full py-4 mt-auto rounded-xl bg-white/5 border border-white/10 text-center text-purple-200 font-bold font-orbitron flex items-center justify-center gap-2 cursor-default">
+              One Event Access
+            </div>
           </div>
         </motion.div>
 
-        {/* --- PLAN 2: UNLIMITED (25th Pre-Conference) --- */}
-        <motion.div variants={cardVariants} className="relative group">
-          <div className="absolute -inset-1 bg-gradient-to-r from-[#FF0080] via-purple-600 to-[#FF0080] rounded-2xl blur opacity-50 group-hover:opacity-100 transition duration-1000"></div>
+        {/* --- PLAN 2: MULTI EVENT (25th Pre-Conference) --- */}
+        <motion.div variants={cardVariants} className="relative group flex flex-col h-full">
+          <div className="absolute -inset-1 bg-gradient-to-r from-[#FF0080] via-purple-600 to-[#FF0080] rounded-2xl blur opacity-30 transition duration-1000"></div>
           
-          <div className="relative h-full bg-[#130720] backdrop-blur-xl border border-[#FF0080]/50 rounded-2xl p-8 flex flex-col overflow-hidden">
+          <div className="relative flex-1 bg-[#130720] backdrop-blur-xl border border-[#FF0080]/30 rounded-2xl p-8 flex flex-col overflow-hidden">
             
             <div className="absolute top-0 right-0">
               <div className="bg-gradient-to-l from-[#FF0080] to-purple-600 text-white text-xs font-bold px-4 py-1.5 rounded-bl-xl shadow-lg flex items-center gap-1">
@@ -82,7 +83,7 @@ const PricingCards = () => {
 
             <div className="mb-6 pt-2">
               <h3 className="text-3xl font-bold font-orbitron text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-300 mb-2">
-                Unlimited Pass
+                Multi Event Pass
               </h3>
               <p className="text-pink-200/80 text-sm">
                 Full Access – 25th Pre-Conference
@@ -91,21 +92,21 @@ const PricingCards = () => {
 
             <div className="mb-8 pb-8 border-b border-[#FF0080]/20">
               <div className="flex items-baseline gap-1">
-                <span className="text-6xl font-bold text-white font-orbitron tracking-wider">₹15</span>
+                <span className="text-6xl font-bold text-white font-orbitron tracking-wider">₹20</span>
                 <span className="text-gray-300">/total</span>
               </div>
             </div>
 
             <ul className="space-y-4 mb-8 flex-1">
               {[
-                "Access to ALL Technical Tracks(25th)",
-                "Paper Presentation Opportunity",
-                "Premium Conference Kit",
-                "Publication Eligibility",
-                "Lunch & Networking"
+                "Pre-Conference: More Than One Event Access (25th)",
+                "Workshop kit",
+                "Softcopy of the workshop material & conference proceedings",
+                "Tea & snacks",
+                "E certificate"
               ].map((feature, index) => (
                 <li key={index} className="flex items-start gap-3 text-white">
-                  <div className="mt-1 bg-gradient-to-br from-[#FF0080] to-purple-600 p-1 rounded-full">
+                  <div className="mt-1 bg-gradient-to-br from-[#FF0080] to-purple-600 p-1 rounded-full shrink-0">
                     <Check size={14} className="text-white" strokeWidth={3} />
                   </div>
                   <span className="font-medium text-sm">{feature}</span>
@@ -113,53 +114,52 @@ const PricingCards = () => {
               ))}
             </ul>
 
-            {/* ✅ FIXED: Added 'flex items-center justify-center gap-2' */}
-            <button className="w-full py-4 rounded-xl bg-gradient-to-r from-[#FF0080] to-purple-600 text-white font-bold font-orbitron hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-pink-500/25">
-              <Zap size={20} className="fill-white" /> Get Unlimited Access
-            </button>
+            {/* Rendered as static text instead of a button */}
+            <div className="w-full py-4 mt-auto rounded-xl bg-[#FF0080]/10 border border-[#FF0080]/30 text-center text-pink-300 font-bold font-orbitron flex items-center justify-center gap-2 cursor-default">
+              <Zap size={20} className="text-pink-400" /> Multi Event Access
+            </div>
           </div>
         </motion.div>
 
-        {/* --- PLAN 3: PREMIUM PLUS (26th & 27th Two-Day Pass) --- */}
-        <motion.div variants={cardVariants} className="relative group">
-          <div className="absolute -inset-1 bg-gradient-to-r from-yellow-400 via-orange-500 to-yellow-400 rounded-2xl blur opacity-40 group-hover:opacity-90 transition duration-700"></div>
+        {/* --- PLAN 3: COMBO (PRE-CONFERENCE + 26th & 27th) --- */}
+        <motion.div variants={cardVariants} className="relative group flex flex-col h-full">
+          <div className="absolute -inset-1 bg-gradient-to-r from-yellow-400 via-orange-500 to-yellow-400 rounded-2xl blur opacity-25 transition duration-700"></div>
           
-          <div className="relative h-full bg-[#1a0d05] backdrop-blur-xl border border-yellow-400/40 rounded-2xl p-8 flex flex-col overflow-hidden">
+          <div className="relative flex-1 bg-[#1a0d05] backdrop-blur-xl border border-yellow-400/30 rounded-2xl p-8 flex flex-col overflow-hidden">
 
             <div className="absolute top-0 right-0">
               <div className="bg-gradient-to-l from-yellow-400 to-orange-500 text-black text-xs font-bold px-4 py-1.5 rounded-bl-xl shadow-lg flex items-center gap-1">
-                <Crown size={12} /> 26th & 27th PASS
+                <Crown size={12} /> COMBO PASS
               </div>
             </div>
 
             <div className="mb-6 pt-2">
               <h3 className="text-3xl font-bold font-orbitron text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-orange-400 mb-2">
-                Two-Day Premium Pass
+                Full Access Combo
               </h3>
               <p className="text-yellow-200/80 text-sm">
-                Access for 26th & 27th Main Conference
+                Pre-Conference + 26th & 27th Full Access
               </p>
             </div>
 
             <div className="mb-8 pb-8 border-b border-yellow-400/20">
               <div className="flex items-baseline gap-1">
-                <span className="text-6xl font-bold text-white font-orbitron tracking-wider">₹20</span>
-                <span className="text-gray-300">/2 days</span>
+                <span className="text-6xl font-bold text-white font-orbitron tracking-wider">₹25</span>
+                <span className="text-gray-300">/total</span>
               </div>
             </div>
 
             <ul className="space-y-4 mb-8 flex-1">
               {[
-                "Access to ALL Technical Tracks (26th & 27th)",
-                "Paper Presentation + Priority Review",
-                "Premium Conference Kit",
-                "Publication Eligibility",
-                "Lunch Included (2 Days)",
-                "4 Times Snacks",
-                "Exclusive Networking Access"
+                "Pre-Conference: More Than One Event Access (25th)",
+                "Main Conference: Full Access (26th & 27th)",
+                "Workshop kit",
+                "Softcopy of the workshop material & conference proceedings",
+                "6 Times Tea & snacks",
+                "E certificate"
               ].map((feature, index) => (
                 <li key={index} className="flex items-start gap-3 text-white">
-                  <div className="mt-1 bg-gradient-to-br from-yellow-400 to-orange-500 p-1 rounded-full">
+                  <div className="mt-1 bg-gradient-to-br from-yellow-400 to-orange-500 p-1 rounded-full shrink-0">
                     <Check size={14} className="text-black" strokeWidth={3} />
                   </div>
                   <span className="font-medium text-sm">{feature}</span>
@@ -167,10 +167,10 @@ const PricingCards = () => {
               ))}
             </ul>
 
-            {/* This one was already mostly correct, kept it consistent */}
-            <button className="w-full py-4 rounded-xl bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-bold font-orbitron hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-yellow-500/25">
-              <Crown size={20} /> Get Two-Day Access
-            </button>
+            {/* Rendered as static text instead of a button */}
+            <div className="w-full py-4 mt-auto rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-center text-yellow-300 font-bold font-orbitron flex items-center justify-center gap-2 cursor-default">
+              <Crown size={20} className="text-yellow-400" /> Full Combo Access
+            </div>
           </div>
         </motion.div>
 

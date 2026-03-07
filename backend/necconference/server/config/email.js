@@ -134,28 +134,46 @@ const sendEventBookConfirmationEmail = async (userData, transactionId, amount, b
   const paymentStatus = billData?.paymentStatus || "Paid";
   const registeredEvents = normalizeEventNames(billData?.events || userData?.events);
   const amountText = Number.isFinite(Number(amount)) ? `${Number(amount)}` : `${amount || 0}`;
+  const orderId = billData?.orderId || "-";
+  const paymentId = billData?.paymentId || transactionId || "-";
+  const upiId = billData?.upiId || "-";
+  const currency = billData?.currency || "INR";
 
   // Generate QR Code with registration details
   let qrCodeDataUrl = "";
   try {
+    // Create a compact QR data object
     const qrData = {
-      participantId,
-      name: participantName,
-      email: participantEmail,
-      events: registeredEvents,
-      amount: amountText,
-      transactionId: transactionId || "N/A",
-      paymentDate: formatDateTime(billData?.paymentDate || new Date()),
-      status: paymentStatus
+      pid: participantId,
+      nm: participantName,
+      em: participantEmail,
+      ev: registeredEvents.join("|"),
+      amt: amountText,
+      cur: currency,
+      oid: orderId,
+      pyid: paymentId,
+      upi: upiId,
+      tid: transactionId || "N/A"
     };
-    qrCodeDataUrl = await QRCode.toDataURL(JSON.stringify(qrData), {
+
+    const qrString = JSON.stringify(qrData);
+    console.log("[QR Code] Generating QR code with data:", qrString);
+
+    qrCodeDataUrl = await QRCode.toDataURL(qrString, {
       errorCorrectionLevel: "H",
       type: "image/png",
       width: 200,
-      margin: 1
+      margin: 1,
+      color: {
+        dark: "#000000",
+        light: "#FFFFFF"
+      }
     });
+    console.log("[QR Code] QR code generated successfully");
   } catch (qrError) {
     console.error("QR Code generation failed:", qrError.message);
+    console.error("QR Code error stack:", qrError.stack);
+    // Continue without QR code - it's not critical
   }
 
   // NEC College Department Map Information
@@ -188,6 +206,10 @@ const sendEventBookConfirmationEmail = async (userData, transactionId, amount, b
             ["Email", participantEmail],
             ["Payment Status", paymentStatus],
             ["Payment Amount (INR)", amountText],
+            ["Currency", currency],
+            ["Order ID", orderId],
+            ["Payment ID", paymentId],
+            ["UPI ID", upiId],
             ["Transaction ID", transactionId || "N/A"],
             ["Payment Time", formatDateTime(billData?.paymentDate || new Date())],
           ])}

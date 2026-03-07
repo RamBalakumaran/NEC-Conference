@@ -21,12 +21,12 @@ const EventSelection = () => {
   };
 
   const eventSchedule = {
-    // "Day 1": {
-    //   "9:30 AM - 11:00 AM": [{ id: 9 }, { id: 10 }, { id: 33 }, { id: 43 }, { id: 58 }, { id: 61 }, { id: 62 }, { id: 77 }, { id: 89 }, { id: 101 }, { id: 102 }, { id: 112 }, { id: 117 }, { id: 119 }, { id: 120 }, { id: 123 }],
-    //   "11:30 AM - 1:30 PM": [{ id: 34 }, { id: 12 }],
-    //   "2:00 PM - 3:30 PM": [{ id: 1 }, { id: 13 }, { id: 17 }, { id: 35 }, { id: 40 }, { id: 45 }, { id: 46 }, { id: 47 }, { id: 48 }, { id: 64 }, { id: 65 }, { id: 81 }, { id: 82 }, { id: 92 }, { id: 93 }, { id: 94 }, { id: 106 }, { id: 114 }, { id: 122 }],
-    //   "3:30 PM - 5:00 PM": [{ id: 7 }, { id: 25 }, { id: 36 }, { id: 39 }, { id: 44 }, { id: 54 }, { id: 55 }, { id: 69 }, { id: 70 }, { id: 71 }, { id: 73 }, { id: 74 }, { id: 80 }, { id: 85 }, { id: 97 }, { id: 98 }, { id: 108 }, { id: 109 }],
-    // },
+    "Day 1": {
+      "9:30 AM - 11:00 AM": [{ id: 9 }, { id: 10 }, { id: 33 }, { id: 43 }, { id: 58 }, { id: 61 }, { id: 62 }, { id: 77 }, { id: 89 }, { id: 101 }, { id: 102 }, { id: 112 }, { id: 117 }, { id: 119 }, { id: 120 }, { id: 123 }],
+      "11:30 AM - 1:30 PM": [{ id: 34 }, { id: 12 }],
+      "2:00 PM - 3:30 PM": [{ id: 1 }, { id: 13 }, { id: 17 }, { id: 35 }, { id: 40 }, { id: 44 }, { id: 45 }, { id: 46 }, { id: 47 }, { id: 48 }, { id: 64 }, { id: 65 }, { id: 81 }, { id: 82 }, { id: 92 }, { id: 93 }, { id: 94 }, { id: 106 }, { id: 114 }, { id: 122 }],
+      "3:30 PM - 5:00 PM": [{ id: 7 }, { id: 25 }, { id: 36 }, { id: 39 }, { id: 54 }, { id: 55 }, { id: 69 }, { id: 70 }, { id: 71 }, { id: 73 }, { id: 74 }, { id: 80 }, { id: 85 }, { id: 97 }, { id: 98 }, { id: 108 }, { id: 109 }],
+    },
     "Day 2": {
       "9:30 AM - 11:00 AM": [{ id: 18 }, { id: 22 }, { id: 23 }, { id: 32 },{ id: 76 }, { id: 78 }, { id: 90 }, { id: 91 }, { id: 104 }, { id: 115 }, { id: 121 }, { id: 122 }],
       "11:30 AM - 1:30 PM": [{ id: 19 }],
@@ -36,9 +36,9 @@ const EventSelection = () => {
   };
 
   const paymentOptions = [
-   // { label: "Day 1", value: "Day 1", price: 200 },
+    { label: "Day 1", value: "Day 1", price: 200 },
     { label: "Day 2", value: "Day 2", price: 200 },
-   // { label: "Day 1 & 2 (both)", value: "Both", price: 300 },
+    { label: "Day 1 & 2 (both)", value: "Both", price: 300 },
   ];
 
   const handlePaymentSelection = (event) => {
