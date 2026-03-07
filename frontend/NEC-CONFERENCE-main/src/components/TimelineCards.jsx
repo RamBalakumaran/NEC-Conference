@@ -42,7 +42,7 @@ export const TimelineCard = ({ title, description, icon }) => {
 
 • Resource persons from academia and industry conduct practical and research-oriented sessions.
 
-• Pricing preference: one event Rs.10, pre-conference more than one event Rs.20, and pre-conference more than one event + 26th & 27th full access Rs.25.
+• Pricing preference: one event Rs.300, pre-conference more than one event Rs.500, and pre-conference more than one event + 26th & 27th full access Rs.1500.
   `;
 
   const hasDropdown =

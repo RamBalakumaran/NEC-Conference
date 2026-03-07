@@ -141,12 +141,14 @@ const sendEventBookConfirmationEmail = async (userData, transactionId, amount, b
 
   // Generate QR Code with registration details
   let qrCodeDataUrl = "";
+  let qrCodeBuffer = null;
   try {
     // Create a compact QR data object
     const qrData = {
       pid: participantId,
       nm: participantName,
       em: participantEmail,
+      ath: billData?.ath || billData?.auth || billData?.authToken || "",
       ev: registeredEvents.join("|"),
       amt: amountText,
       cur: currency,
@@ -163,6 +165,16 @@ const sendEventBookConfirmationEmail = async (userData, transactionId, amount, b
       errorCorrectionLevel: "H",
       type: "image/png",
       width: 200,
+      margin: 1,
+      color: {
+        dark: "#000000",
+        light: "#FFFFFF"
+      }
+    });
+    qrCodeBuffer = await QRCode.toBuffer(qrString, {
+      errorCorrectionLevel: "H",
+      type: "png",
+      width: 300,
       margin: 1,
       color: {
         dark: "#000000",
@@ -229,7 +241,7 @@ const sendEventBookConfirmationEmail = async (userData, transactionId, amount, b
         ${qrCodeDataUrl ? `
         <div style="margin-top:20px;padding:16px;background:#f3f4f6;border-radius:8px;border:1px solid #e5e7eb;text-align:center;">
           <div style="font-weight:600;margin-bottom:12px;font-size:14px;">Registration QR Code</div>
-          <img src="${qrCodeDataUrl}" alt="Registration QR Code" style="width:200px;height:200px;border:2px solid #4c1d95;border-radius:4px;" />
+          <img src="cid:registration-qr" alt="Registration QR Code" style="width:200px;height:200px;border:2px solid #4c1d95;border-radius:4px;" />
           <p style="margin:12px 0 0 0;font-size:12px;color:#6b7280;">Scan this QR code at the venue for verification</p>
         </div>
         ` : ''}
@@ -237,6 +249,16 @@ const sendEventBookConfirmationEmail = async (userData, transactionId, amount, b
         <p style="margin:14px 0 0 0;line-height:1.6;">Please carry this bill copy for verification at the venue.</p>
       `,
     }),
+    attachments: qrCodeBuffer
+      ? [
+          {
+            filename: `NEC-Registration-QR-${participantId || "PID"}.png`,
+            content: qrCodeBuffer,
+            contentType: "image/png",
+            cid: "registration-qr"
+          }
+        ]
+      : []
   };
 
   try {

@@ -169,14 +169,14 @@ const createOrder = async (req, res) => {
         }
 
         // determine rupee amount (allowlisted for server-side enforcement)
-        const ALLOWED_AMOUNTS = [10, 20, 25];
+        const ALLOWED_AMOUNTS = [300, 500, 1500];
         const hasBodyAmount = bodyAmount !== undefined && bodyAmount !== null && bodyAmount !== '';
         let rupees = hasBodyAmount ? parseFloat(bodyAmount) : 10;
         if (!Number.isFinite(rupees) || rupees <= 0) {
           return res.status(400).json({ error: 'Invalid amount' });
         }
         if (!ALLOWED_AMOUNTS.includes(rupees)) {
-          return res.status(400).json({ error: 'Amount must be one of 10, 20, or 25' });
+          return res.status(400).json({ error: 'Amount must be one of 300, 500, or 1500' });
         }
         const paise = Math.round(rupees * 100);
         const currency = 'INR';

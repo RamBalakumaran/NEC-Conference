@@ -252,7 +252,7 @@ const trackData = [
     shortDesc: "Antenna arrays are groups of antennas working together to improve wireless communication",
     color: "from-green-600 to-cyan-600",
     resourcePersons: [
-      { name: "Dr. V. Lingasamy", designation: "ME, PhD, MSc Yoga", image: profileImage("Dr.V.Lingasamy.webp"), linkedin: "" }
+      { name: "Dr. V. Lingasamy", designation: "ME, PhD, MSc Yoga", image: profileImage("Dr. V. Lingasamy.webp"), linkedin: "" }
     ],
     description: [
       "Antenna arrays are groups of antennas working together to improve wireless communication. Instead of radiating energy in all directions like a single antenna, arrays use wave interference to focus signals where they are needed. This enables beam steering, higher signal strength, reduced interference, and higher data rates, which are essential for today's mobile networks.",

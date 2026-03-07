@@ -367,7 +367,7 @@ const mainConferenceData = {
   time: "09:00 AM - 05:00 PM",
   start: "2026-03-26T09:00:00",
   end: "2026-03-27T17:00:00",
-  price: 20,
+  price: 1500,
   mode: "Hybrid",
   location: "National Engineering College, K.R. Nagar, Kovilpatti - 628503",
   contact: "icodses2026@nec.edu.in",

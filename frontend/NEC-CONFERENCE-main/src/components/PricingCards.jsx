@@ -40,7 +40,7 @@ const PricingCards = () => {
 
             <div className="mb-8 pb-8 border-b border-white/10">
               <div className="flex items-baseline gap-1">
-                <span className="text-5xl font-bold text-white font-orbitron tracking-wider">₹10</span>
+                <span className="text-5xl font-bold text-white font-orbitron tracking-wider">₹300</span>
                 <span className="text-gray-400">/event</span>
               </div>
             </div>
@@ -92,7 +92,7 @@ const PricingCards = () => {
 
             <div className="mb-8 pb-8 border-b border-[#FF0080]/20">
               <div className="flex items-baseline gap-1">
-                <span className="text-6xl font-bold text-white font-orbitron tracking-wider">₹20</span>
+                <span className="text-6xl font-bold text-white font-orbitron tracking-wider">₹500</span>
                 <span className="text-gray-300">/total</span>
               </div>
             </div>
@@ -144,7 +144,7 @@ const PricingCards = () => {
 
             <div className="mb-8 pb-8 border-b border-yellow-400/20">
               <div className="flex items-baseline gap-1">
-                <span className="text-6xl font-bold text-white font-orbitron tracking-wider">₹25</span>
+                <span className="text-6xl font-bold text-white font-orbitron tracking-wider">₹1500</span>
                 <span className="text-gray-300">/total</span>
               </div>
             </div>

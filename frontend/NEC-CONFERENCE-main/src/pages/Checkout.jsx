@@ -14,7 +14,7 @@ const Checkout = () => {
   const hasMainConf = cart.some(item => item.id === MAIN_CONF_ID);
   const standardEvents = cart.filter(item => item.id !== MAIN_CONF_ID);
   const standardCount = standardEvents.length;
-  const hasComboPlan = hasMainConf && standardCount > 1;
+  const hasComboPlan = hasMainConf;
 
   const handleProceed = () => {
     const paymentData = {
@@ -63,14 +63,18 @@ const Checkout = () => {
                         {/* Price Display Logic */}
                         <span className="text-gray-300 font-mono font-bold text-right">
                           {isMainConf ? (
-                            <span className="text-pink-400 text-lg">₹25</span>
+                            <span className="text-pink-400 text-lg">₹1500</span>
                           ) : (
-                            standardCount > 1 ? (
+                            hasComboPlan ? (
+                              <span className="text-xs bg-amber-900/40 text-amber-300 px-2 py-1 rounded border border-amber-500/30 whitespace-nowrap">
+                                Included in Combo
+                              </span>
+                            ) : standardCount > 1 ? (
                               <span className="text-xs bg-green-900/50 text-green-300 px-2 py-1 rounded border border-green-500/30 whitespace-nowrap">
-                                {hasComboPlan ? "Included in Combo" : "Included in Bundle"}
+                                Included in Bundle
                               </span>
                             ) : (
-                              "₹10"
+                              "₹300"
                             )
                           )}
                         </span>
@@ -108,8 +112,8 @@ const Checkout = () => {
                       {/* Pre-Conference/Main Conference Cost */}
                       {hasComboPlan ? (
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-400">Combo (&gt;1 Pre-Conference + 26 &amp; 27 Full Access)</span>
-                          <span className="text-pink-400 font-mono">₹25</span>
+                          <span className="text-gray-400">Combo (Pre-Conference + 26 &amp; 27 Full Access)</span>
+                          <span className="text-pink-400 font-mono">₹1500</span>
                         </div>
                       ) : (
                         <>
@@ -118,16 +122,8 @@ const Checkout = () => {
                             <div className="flex justify-between items-center">
                               <span className="text-gray-400">Pre-Conference ({standardCount})</span>
                               <span className="text-green-400 font-mono">
-                                {standardCount > 1 ? "₹20 (Bundle)" : "₹10"}
+                                {standardCount > 1 ? "₹500 (Bundle)" : "₹300"}
                               </span>
-                            </div>
-                          )}
-
-                          {/* Main Conference Cost */}
-                          {hasMainConf && (
-                            <div className="flex justify-between items-center">
-                              <span className="text-gray-400">Main Conference</span>
-                              <span className="text-pink-400 font-mono">₹25</span>
                             </div>
                           )}
                         </>

@@ -37,7 +37,7 @@ function About() {
         {
           id: 5,
           title: "Registration & Participation", 
-          description: "Pricing preference: one event Rs.10, pre-conference more than one event Rs.20, and pre-conference more than one event + 26th & 27th full access Rs.25.",
+          description: "Pricing preference: one event Rs.300, pre-conference more than one event Rs.500, and pre-conference more than one event + 26th & 27th full access Rs.1500.",
           date: "Open Now",
           icon: <FaRegLightbulb size={30} color="white" />
         },

@@ -154,22 +154,16 @@ export const ConferenceProvider = ({ children }) => {
     // 2. Count other (Pre-conference) events
     const standardEventsCount = currentCart.filter(item => item.id !== MAIN_CONF_ID).length;
 
-    // Combo override:
-    // more than one pre-conference event + main conference (26th & 27th) => flat 25
-    if (hasMainConference && standardEventsCount > 1) {
-      return 25;
+    // Combo pass (Main Conference + allow multiple pre-conference events)
+    if (hasMainConference) {
+      return 1500;
     }
 
-    let total = 0;
+    // Pre-Conference pricing only
+    if (standardEventsCount === 1) return 300;
+    if (standardEventsCount > 1) return 500;
 
-    // Bundle Logic for Pre-Conference Events
-    if (standardEventsCount === 1) total += 10;
-    else if (standardEventsCount > 1) total += 20;
-
-    // Add Main Conference Fee
-    if (hasMainConference) total += 25;
-
-    return total;
+    return 0;
   };
 
   return (
