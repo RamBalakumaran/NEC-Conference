@@ -17,6 +17,7 @@ const QrScannerPanel = () => {
   const [qrPayload, setQrPayload] = useState('');
   const [cameraList, setCameraList] = useState([]);
   const [selectedCameraId, setSelectedCameraId] = useState('');
+  const fileInputRef = useRef(null);
 
   const stopQrScanner = () => {
     if (!qrScannerRef.current) {
@@ -57,6 +58,10 @@ const QrScannerPanel = () => {
 
   const startQrScanner = async () => {
     if (isScanning) return;
+    if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+      setScanError('Camera access requires HTTPS or localhost.');
+      return;
+    }
     setScanError(null);
     setScanResult(null);
     lastScanRef.current = null;
@@ -131,6 +136,29 @@ const QrScannerPanel = () => {
     }
   };
 
+  const handleScanFromImage = async (file) => {
+    if (!file) return;
+    setScanError(null);
+    setScanResult(null);
+    setLookupLoading(true);
+    try {
+      const scanner = new Html5Qrcode(QR_REGION_ID);
+      const decodedText = await scanner.scanFile(file, true);
+      try {
+        await scanner.clear();
+      } catch {
+        // ignore cleanup errors
+      }
+      await handleQrLookup(decodedText);
+    } catch (err) {
+      const message = err?.message || 'Unable to decode QR from image';
+      setScanError(message);
+    } finally {
+      setLookupLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   useEffect(() => {
     const loadCameras = async () => {
       try {
@@ -200,6 +228,12 @@ const QrScannerPanel = () => {
             >
               <RefreshCcw size={16} /> Re-Verify
             </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2 bg-slate-600 hover:bg-slate-700 text-white font-bold px-4 py-2 rounded-lg shadow-lg text-sm"
+            >
+              <QrCode size={16} /> Scan Image
+            </button>
           </div>
 
           {cameraList.length > 0 && (
@@ -249,6 +283,13 @@ const QrScannerPanel = () => {
               <QrCode size={16} /> Verify Payload
             </button>
           </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => handleScanFromImage(e.target.files?.[0])}
+          />
         </div>
 
         <div className="bg-[#130720]/80 backdrop-blur-xl border border-purple-500/20 p-6 rounded-2xl shadow-2xl">
