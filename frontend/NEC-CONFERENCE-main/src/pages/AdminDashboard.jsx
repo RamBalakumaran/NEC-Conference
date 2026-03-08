@@ -2,10 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
+import QrScannerPanel from '../components/QrScannerPanel';
 import { useConference } from '../context/ConferenceContext';
 import { 
   Download, Users, DollarSign, LogOut, CheckCircle, Clock, Loader2, 
-  Shield, XCircle, BarChart3, TrendingUp, Eye, Filter, Mail, CalendarCheck, Check, X, Search, ChevronDown 
+  Shield, XCircle, BarChart3, TrendingUp, Eye, Filter, Mail, CalendarCheck, Check, X, Search, ChevronDown,
+  QrCode
 } from 'lucide-react';
 
 // some event entries use `title` rather than `name` - helper to extract display text
@@ -154,6 +156,8 @@ const AdminDashboard = () => {
   const [eventsOpen, setEventsOpen] = useState(false);
   const eventsRef = useRef(null);
   const isLoggingOut = useRef(false);
+  const [attendanceRows, setAttendanceRows] = useState([]);
+
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -167,7 +171,6 @@ const AdminDashboard = () => {
   },[]);
   
   const ALL_DEPARTMENTS =['CSE', 'ECE', 'EEE', 'Mechanical', 'Civil', 'IT', 'SH'];
-
   // Check Auth & Fetch Data
   useEffect(() => {
     const checkAuthAndFetch = async () => {
@@ -197,20 +200,35 @@ const AdminDashboard = () => {
           return { data: { registrations:[], stats: {} } };
         });
 
-        const rawData = mainRes.data.transactions || mainRes.data.registrations ||[];
+        const registrationRows = mainRes.data.registrations || [];
+        const transactionRows = mainRes.data.transactions || [];
+
+        const registrationByEmail = new Map(
+          registrationRows
+            .map((r) => ({
+              ...r,
+              email: r?.userData?.email || r?.user?.email || r?.contactEmail || ''
+            }))
+            .filter((r) => r.email)
+            .map((r) => [String(r.email).toLowerCase(), r])
+        );
+
+        const rawData = transactionRows.length > 0 ? transactionRows : registrationRows;
 
         // Normalize/flatten backend registration objects so frontend can read fields like
         // `user.name`, `user.email`, `user.paymentAmount`, `user.paymentStatus`, etc.
         const enhancedData = rawData.map(item => {
           // Extract user data - could be nested as item.user or item.userData
           const userData = item.user || item.userData || {};
+          const email = String(userData.email || item.userId || item.contactEmail || '').toLowerCase();
+          const regMatch = email ? registrationByEmail.get(email) : null;
           
           // Front-end safeguard: Exclude Admin accounts from the table
           if (userData.role === 'admin' || userData.isAdmin || userData.email === 'admin@gmail.com') {
               return null;
           }
 
-          const payment = item.payment || {};
+          const payment = item.payment || regMatch?.payment || {};
           
           // Normalize Payment Status safely to match dropdown string
           let pStatus = payment.paymentStatus || payment.status || item.status || 'Pending';
@@ -221,7 +239,9 @@ const AdminDashboard = () => {
           // ensure selectedEvents always array of objects with `name`
           const evtsRaw = Array.isArray(item.selectedEvents) && item.selectedEvents.length > 0
             ? item.selectedEvents
-            : toEventArray(item.events);
+            : (Array.isArray(regMatch?.selectedEvents) && regMatch.selectedEvents.length > 0
+              ? regMatch.selectedEvents
+              : toEventArray(item.events));
           const normalizedEvents = evtsRaw.map(e => {
             const display = getEventDisplayName(e);
             return { name: display };
@@ -229,7 +249,7 @@ const AdminDashboard = () => {
 
           return {
             // Keep registration id if present, else fallback to userId or temp id
-            _id: item.id || item._id || item.userId || (userData.id ? userData.id : undefined),
+            _id: regMatch?.id || regMatch?._id || item.id || item._id || undefined,
             // Flattened user fields used across the component
             name: userData.name || userData.fullName || userData.firstName || (item.userId ? String(item.userId).split('@')[0] : ''),
             pid: userData.participantId || userData.pid || item.pid || '-',
@@ -247,12 +267,46 @@ const AdminDashboard = () => {
             transactionId: payment.transactionId || payment.paymentId || item.transactionId || item.razorpayPaymentId || 'N/A',
 
             // Attendance and date
-            attendance: item.attendance || { day1: false, day2: false, day3: false },
-            createdAt: item.createdAt || item.registeredOn || userData.createdAt || null,
+            attendance: regMatch?.attendance || item.attendance || { day1: false, day2: false, day3: false },
+            createdAt: regMatch?.registeredOn || item.createdAt || item.registeredOn || userData.createdAt || null,
           };
         }).filter(Boolean); // Filters out the nulls (admins)
 
+        const attendanceData = registrationRows.map(item => {
+          const userData = item.user || item.userData || {};
+          if (userData.role === 'admin' || userData.isAdmin || userData.email === 'admin@gmail.com') {
+            return null;
+          }
+
+          const payment = item.payment || {};
+          let pStatus = payment.paymentStatus || payment.status || item.status || 'Pending';
+          if (pStatus === true || String(pStatus).toLowerCase() === 'paid') pStatus = 'Paid';
+          else if (String(pStatus).toLowerCase() === 'failed') pStatus = 'Failed';
+          else pStatus = 'Pending';
+
+          const evtsRaw = Array.isArray(item.selectedEvents) ? item.selectedEvents : [];
+          const normalizedEvents = evtsRaw.map(e => ({ name: getEventDisplayName(e) }));
+
+          return {
+            _id: item._id || item.id || undefined,
+            name: userData.name || userData.fullName || userData.firstName || '',
+            pid: userData.participantId || userData.pid || item.pid || '-',
+            email: userData.email || item.contactEmail || '',
+            phone: userData.phone || userData.mobile || '',
+            department: userData.department || userData.dept || item.department || 'Unknown',
+            year: userData.year || item.year || '',
+            college: userData.college || item.college || '',
+            selectedEvents: normalizedEvents,
+            paymentAmount: payment.amount || 0,
+            paymentStatus: pStatus,
+            transactionId: payment.transactionId || 'N/A',
+            attendance: item.attendance || { day1: false, day2: false, day3: false },
+            createdAt: item.registeredOn || item.createdAt || userData.createdAt || null,
+          };
+        }).filter(Boolean);
+
         setAttendees(enhancedData);
+        setAttendanceRows(attendanceData);
         setStats(mainRes.data.stats || {});
 
         const dataDepts = [...new Set(enhancedData.map(item => item.department).filter(Boolean))];
@@ -310,8 +364,8 @@ const AdminDashboard = () => {
   }, [navigate]);
 
   // Filtering Logic
-  const getFilteredData = () => {
-    let data = attendees;
+  const getFilteredDataFrom = (input) => {
+    let data = input;
 
     if (searchTerm) {
       const lowerSearch = searchTerm.toLowerCase();
@@ -350,7 +404,8 @@ const AdminDashboard = () => {
     return data;
   };
 
-  const displayData = getFilteredData();
+  const displayData = getFilteredDataFrom(attendees);
+  const attendanceDisplayData = getFilteredDataFrom(attendanceRows);
 
   // Filter dropdown events
   const filteredDropdownEvents = events.filter(ev => {
@@ -361,7 +416,7 @@ const AdminDashboard = () => {
 
   // Attendance Toggle (just update local state; save later)
   const handleAttendanceToggle = (userId, day) => {
-    const updatedAttendees = attendees.map(att => {
+    const updatedAttendees = attendanceRows.map(att => {
         if (att._id === userId) {
             const currentStatus = att.attendance?.[day] || false;
             return {
@@ -371,7 +426,7 @@ const AdminDashboard = () => {
         }
         return att;
     });
-    setAttendees(updatedAttendees);
+    setAttendanceRows(updatedAttendees);
   };
 
   // Save all attendance changes in one request
@@ -379,7 +434,7 @@ const AdminDashboard = () => {
     try {
       const token = localStorage.getItem('adminToken');
       // build updates list
-      const updates = attendees.map(u => ({
+      const updates = attendanceRows.map(u => ({
         registrationId: u._id,
         attendance: u.attendance || { day1: false, day2: false, day3: false }
       }));
@@ -396,7 +451,7 @@ const AdminDashboard = () => {
 
   // Exports
   const handleExportAttendance = () => {
-    const dataToExport = displayData.map(user => ({
+    const dataToExport = attendanceDisplayData.map(user => ({
       "Name": user.name,
       "Email": user.email,
       "Department": user.department,
@@ -540,6 +595,7 @@ const AdminDashboard = () => {
           { id: 'active-users', label: 'Active Users', icon: <Eye size={18} /> },
           { id: 'analytics', label: 'Analytics', icon: <TrendingUp size={18} /> },
           { id: 'reports', label: 'Registrations', icon: <Download size={18} /> },
+          { id: 'qr-scanner', label: 'QR Scanner', icon: <QrCode size={18} /> },
           { id: 'attendance', label: 'Attendance', icon: <CalendarCheck size={18} /> }
         ].map(tab => (
           <button
@@ -983,6 +1039,9 @@ const AdminDashboard = () => {
         </div>
       )}
 
+      {/* QR SCANNER TAB */}
+      {activeTab === 'qr-scanner' && <QrScannerPanel />}
+
       {/* --- ATTENDANCE TAB --- */}
       {activeTab === 'attendance' && (
         <div className="relative z-10 max-w-7xl mx-auto space-y-6">
@@ -1027,7 +1086,7 @@ const AdminDashboard = () => {
                 </thead>
                 <tbody>
                   {/* FIXED: Also shows all rows in Attendance tab */}
-                  {displayData.map((user, idx) => (
+                  {attendanceDisplayData.map((user, idx) => (
                     <tr key={idx} className="border-b border-purple-500/10 hover:bg-purple-500/5 transition-colors">
                       <td className="py-3 px-4">
                         <div className="font-medium text-white">{user.name}</div>
@@ -1055,7 +1114,7 @@ const AdminDashboard = () => {
                 </tbody>
               </table>
             </div>
-            {displayData.length === 0 && (
+            {attendanceDisplayData.length === 0 && (
                 <div className="text-center py-10 text-gray-500">No attendees match your search.</div>
             )}
           </div>

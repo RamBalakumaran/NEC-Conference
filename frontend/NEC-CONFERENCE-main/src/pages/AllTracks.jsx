@@ -798,7 +798,7 @@ const formattedWorkshops = workshopData.map(track => ({
           alt={person.name}
           loading="eager"
           decoding="async"
-          fetchPriority="high"
+          fetchpriority="high"
           width={80}
           height={80}
           onError={() => setHasError(true)}

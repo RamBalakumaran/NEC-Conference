@@ -9,6 +9,33 @@ const { assignParticipantIdToUser } = require('../service/participantIdService')
 const { paymentModel } = require('../model/paymentModel');
 
 const eventNameOf = (ev) => (typeof ev === 'string' ? ev : (ev?.name || ev?.title || null));
+const normalizeEventNames = (values) => {
+    const items = Array.isArray(values) ? values : [];
+    return Array.from(
+        new Set(
+            items
+                .map((ev) => eventNameOf(ev) || String(ev || '').trim())
+                .filter(Boolean)
+        )
+    );
+};
+const parseQrEvents = (value) => {
+    if (!value) return [];
+    if (Array.isArray(value)) return normalizeEventNames(value);
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) return [];
+        if (trimmed.includes('|')) {
+            return normalizeEventNames(trimmed.split('|'));
+        }
+        try {
+            const parsed = JSON.parse(trimmed);
+            if (Array.isArray(parsed)) return normalizeEventNames(parsed);
+        } catch {}
+        return normalizeEventNames([trimmed]);
+    }
+    return [];
+};
 const canonicalPaymentStatus = (value) => {
     const normalized = String(value || '').toLowerCase();
     if (value === true || normalized === 'paid' || normalized === 'captured') return 'Paid';
@@ -33,6 +60,45 @@ const paymentStatusToRegistrationStatus = (value) => {
     if (normalized === 'failed') return 'Failed';
     return 'Pending';
 };
+
+const parseQrPayload = (qrText) => {
+    const raw = String(qrText || '').trim();
+    if (!raw) throw new Error('Empty QR payload');
+    let data = null;
+    try {
+        data = JSON.parse(raw);
+    } catch {
+        // Accept payloads pasted without surrounding braces
+        const maybeWrapped = raw.startsWith('{') ? raw : `{${raw}}`;
+        try {
+            data = JSON.parse(maybeWrapped);
+        } catch {
+            throw new Error('QR payload is not valid JSON');
+        }
+    }
+    if (!data || typeof data !== 'object') {
+        throw new Error('QR payload format not recognized');
+    }
+    return data;
+};
+
+const getPaymentByOrderId = (orderId) =>
+    new Promise((resolve) => {
+        if (!orderId) return resolve(null);
+        paymentModel.getPaymentByOrderId(orderId, (err, row) => {
+            if (err) return resolve(null);
+            return resolve(row || null);
+        });
+    });
+
+const getPaymentsByUserId = (userId) =>
+    new Promise((resolve) => {
+        if (!userId) return resolve([]);
+        paymentModel.getPaymentsByUserId(userId, (err, rows) => {
+            if (err) return resolve([]);
+            return resolve(rows || []);
+        });
+    });
 
 // --- 1. Get All Registrations (Dashboard Main Data) ---
 // --- 1. Get All Registrations & Transactions ---
@@ -235,6 +301,7 @@ const getAllRegistrations = async (req, res) => {
                 userId: user.id,
                 userData: { ...user, participantId: resolvedPid },
                 selectedEvents: userReg?.selectedEvents || [],
+                attendance: userReg?.attendance || { day1: false, day2: false, day3: false },
                 payment: {
                     amount: userReg?.payment?.amount || 0,
                     paymentStatus: paymentStatus,
@@ -266,7 +333,11 @@ const markAttendance = async (req, res) => {
             return res.status(400).json({ message: "Invalid day selected" });
         }
 
-        if (registrationId.startsWith('temp_')) {
+        const regId = String(registrationId || '');
+        if (!regId) {
+            return res.status(400).json({ message: "registrationId required" });
+        }
+        if (regId.startsWith('temp_')) {
              return res.status(400).json({ message: "User has not completed registration (No Registration ID)" });
         }
 
@@ -276,7 +347,7 @@ const markAttendance = async (req, res) => {
             return { attendance: a };
         };
 
-        const reg = await Registration.findByPk(registrationId);
+        const reg = await Registration.findByPk(regId);
         if (reg) {
             await reg.update(updateField(reg));
         } else {
@@ -300,10 +371,11 @@ const markAttendanceBulk = async (req, res) => {
 
         for (const upd of updates) {
             const { registrationId, attendance } = upd;
-            if (!registrationId) continue;
-            if (registrationId.startsWith('temp_')) continue;
+            const regId = String(registrationId || '');
+            if (!regId) continue;
+            if (regId.startsWith('temp_')) continue;
 
-            const reg = await Registration.findByPk(registrationId);
+            const reg = await Registration.findByPk(regId);
             if (!reg) continue;
             // merge attendance object
             const existing = reg.attendance || {};
@@ -482,6 +554,123 @@ const exportRegistrationsToExcel = async (req, res) => {
     res.status(200).json({ message: "Use Frontend Export" });
 };
 
+// --- 11. Verify QR Scan ---
+const verifyQrScan = async (req, res) => {
+    try {
+        const { qrText } = req.body || {};
+        const qrData = parseQrPayload(qrText);
+
+        const email = String(qrData?.em || '').trim();
+        const participantId = String(qrData?.pid || '').trim();
+        const qrEvents = parseQrEvents(qrData?.ev);
+
+        let user = null;
+        if (participantId) {
+            user = await UserData.findOne({ where: { participantId } });
+        }
+        if (!user && email) {
+            user = await UserData.findOne({ where: { email } });
+        }
+
+        let registration = null;
+        if (user?.id) {
+            registration = await Registration.findOne({
+                where: { userId: user.id },
+                order: [['updatedAt', 'DESC']]
+            });
+        }
+        if (!registration && email) {
+            registration = await Registration.findOne({
+                where: { contactEmail: email },
+                order: [['updatedAt', 'DESC']]
+            });
+        }
+
+        let paymentRow = await getPaymentByOrderId(qrData?.oid || null);
+        if (!paymentRow && email) {
+            const payments = await getPaymentsByUserId(email);
+            if (payments.length > 0) {
+                const transactionId = String(qrData?.tid || qrData?.pyid || '').trim();
+                paymentRow =
+                    payments.find((p) => String(p.transactionId || '').trim() === transactionId) ||
+                    payments.find((p) => String(p.razorpayPaymentId || '').trim() === transactionId) ||
+                    payments.find((p) => canonicalPaymentStatus(p.status) === 'Paid') ||
+                    payments[0];
+            }
+        }
+
+        const regEvents = normalizeEventNames(registration?.selectedEvents || []);
+        const paymentEvents = parsePaymentEvents(paymentRow?.events);
+        const mergedEvents = regEvents.length
+            ? regEvents
+            : paymentEvents.length
+            ? normalizeEventNames(paymentEvents)
+            : qrEvents;
+
+        const paymentStatus = canonicalPaymentStatus(
+            paymentRow?.status ||
+            registration?.payment?.paymentStatus ||
+            registration?.status
+        );
+
+        const paymentAmount =
+            Number(paymentRow?.amount) ||
+            Number(registration?.payment?.amount) ||
+            Number(qrData?.amt) ||
+            0;
+
+        const paymentCurrency =
+            paymentRow?.currency ||
+            registration?.payment?.currency ||
+            qrData?.cur ||
+            'INR';
+
+        const paymentDetails = {
+            amount: paymentAmount,
+            currency: paymentCurrency,
+            status: paymentStatus,
+            orderId: paymentRow?.razorpayOrderId || qrData?.oid || '-',
+            paymentId: paymentRow?.razorpayPaymentId || qrData?.pyid || '-',
+            transactionId: paymentRow?.transactionId || qrData?.tid || '-',
+            upiId: qrData?.upi || '-',
+            paymentDate: paymentRow?.updatedAt || registration?.payment?.date || null
+        };
+
+        const participant = {
+            name: user?.name || qrData?.nm || '-',
+            email: user?.email || email || '-',
+            participantId: user?.participantId || participantId || '-',
+            phone: user?.phone || '-',
+            department: user?.department || '-',
+            year: user?.year || '-',
+            college: user?.college || '-'
+        };
+
+        res.status(200).json({
+            ok: true,
+            participant,
+            events: mergedEvents,
+            registration: registration
+                ? {
+                    id: registration.id,
+                    status: registration.status || '-',
+                    attendance: registration.attendance || {},
+                    registeredOn: registration.registeredOn || registration.createdAt || null
+                }
+                : null,
+            payment: paymentDetails,
+            sources: {
+                user: user ? 'db' : 'qr',
+                registration: registration ? 'db' : 'qr',
+                payment: paymentRow ? 'payments' : (registration?.payment ? 'registration' : 'qr')
+            },
+            qr: qrData
+        });
+    } catch (error) {
+        res.status(400).json({ ok: false, message: error?.message || 'Invalid QR payload' });
+    }
+};
+
 module.exports = { 
     getAllRegistrations, 
     markAttendance, 
@@ -493,5 +682,6 @@ module.exports = {
     sendPendingPaymentReminders,
     exportLogsToExcel,
     getLogs,
-    exportRegistrationsToExcel
+    exportRegistrationsToExcel,
+    verifyQrScan
 };

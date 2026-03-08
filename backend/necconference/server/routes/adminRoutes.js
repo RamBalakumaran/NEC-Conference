@@ -13,7 +13,8 @@ const {
     sendPendingPaymentReminders,
     exportLogsToExcel,
     getLogs,
-    exportRegistrationsToExcel
+    exportRegistrationsToExcel,
+    verifyQrScan
 } = require('../controller/adminController');
 
 // Define Routes
@@ -39,5 +40,8 @@ router.post('/send-payment-reminders', sendPendingPaymentReminders);
 router.get('/logs', getLogs);
 router.get('/registrations/export-logs', exportLogsToExcel);
 router.get('/registrations/export', exportRegistrationsToExcel);
+
+// 6. QR Verification
+router.post('/qr/verify', verifyQrScan);
 
 module.exports = router;
