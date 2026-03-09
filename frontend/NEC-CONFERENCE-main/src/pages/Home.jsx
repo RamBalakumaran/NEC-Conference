@@ -372,43 +372,45 @@ const trackData = [
   {
     id: "aids-1",
     dept: "AI & DS",
-    title: "N8n: AI-Driven Visual Workflow Automation",
-    shortDesc: "Building autonomous agents and workflows.",
+    title: "Challenges of Emerging AI Agents in SaaS Platforms",
+    shortDesc: "Explore real-world challenges of deploying AI agents in SaaS systems.",
     color: "from-pink-600 to-purple-600",
     resourcePersons: [
-      { name: "Mr. Mahadevan B", designation: "Automation Architect", image: profileImage("Mr.B.Mahadevan.webp"), linkedin: "https://www.linkedin.com/in/mahadevan-b-5b617622?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" }
+      { name: "Mr.S.Ajithkumar", designation: "Module lead  - Embedded Software. Mistral solutions private limited, Bengaluru Mistral Solutions Pvt. Ltd", image: profileImage("Mr.S.Ajithkumar.webp"), linkedin: "https://www.linkedin.com/in/ajith-kumar-s-100033179?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" }
     ],
     description: [
-      "In the rapidly evolving landscape of SaaS, automation is key. This workshop focuses on N8n, a powerful workflow automation tool that integrates seamlessly with AI agents.",
-      "Participants will learn to build node-based visual workflows that connect various apps and services, embedding AI capabilities to handle complex decision-making tasks without writing extensive code."
-    ],
+    "Explores the real-world challenges of integrating AI agents into SaaS platforms beyond demos and hype.",
+    "Discusses reliability issues, hallucination control, security risks, privacy concerns, cost scaling, and building user trust in AI-driven systems."
+  ],
     topics: [
-      "Introduction to N8n and Node-based Automation",
-      "Integrating LLMs into Workflows",
-      "Building Autonomous AI Agents",
-      "API Integration Strategies"
-    ]
+    "Limitations of current AI agents",
+    "Security and privacy risks",
+    "Reliability and hallucination control",
+    "Architecture patterns for AI agent-based SaaS",
+    "Evaluating when AI agents are necessary"
+  ]
   },
   {
     id: "aids-2",
     dept: "AI & DS",
-    title: "Challenges of Emerging AI Agents in SaaS",
-    shortDesc: "Navigating ethics, scalability, and integration in AI SaaS.",
+    title: "Innovative IoT Design Using Advanced Intelligent Simulation Tools",
+    shortDesc: "Design and test IoT systems virtually before real-world deployment.",
     color: "from-pink-500 to-rose-500",
     resourcePersons: [
       { name: "Ms. Anitha V", designation: "Data Analytics Expert", image: profileImage("Ms.V.Anitha.webp"), linkedin: "https://www.linkedin.com/in/anitha-v-?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" }
     ],
     description: [
-      "As AI Agents become central to SaaS platforms, unique challenges arise in terms of reliability, security, and user trust. This session explores the current landscape of AI-infused SaaS.",
-      "Discussions will focus on the 'Hallucination' problem, data privacy concerns in multi-tenant architectures, and the cost implications of running large-scale agentic workflows.",
-      "Participants will analyze case studies of successful and failed AI feature rollouts in major SaaS products."
-    ],
+    "Introduces the design and testing of IoT systems using intelligent simulation tools before real-world deployment.",
+    "Participants will learn to model sensors, communication networks, and smart decision systems in a virtual environment to analyze performance, reliability, and efficiency."
+  ],
     topics: [
-      "Reliability & Hallucination Mitigation",
-      "Data Privacy in AI SaaS",
-      "Cost Optimization for LLM Calls",
-      "User Trust & Explainability"
-    ]
+    "IoT system architecture (Sensors → Gateway → Cloud → Analytics)",
+    "Designing and simulating IoT networks",
+    "Power consumption and communication delay analysis",
+    "System reliability evaluation",
+    "AI integration in IoT simulations",
+    "Virtual prototyping to reduce cost and development time"
+  ]
   },
 
   // --- S&H DEPARTMENT ---
@@ -528,7 +530,7 @@ const detailedTrackOverrides = {
     title: "AR Unlocked: Creating Immersive Experiences with Vuforia & Unity",
     resourcePersons: [{ name: "Mr. Karthikeyan", designation: "AR/XR Developer", image: profileImage("Mr.J.Karthikeyan.webp"), linkedin: "https://www.linkedin.com/in/karthikeyanmecse?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" }]
   },
-  "aids-1": { resourcePersons: [{ name: "Mr. Mahadevan B", designation: "Automation Architect", image: profileImage("Mr.B.Mahadevan.webp"), linkedin: "https://www.linkedin.com/in/mahadevan-b-5b617622?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" }] },
+  "aids-1": { resourcePersons: [{ name: "Mr.S.Ajithkumar ", designation: "Module lead  - Embedded Software. Mistral solutions private limited, Bengaluru Mistral Solutions Pvt. Ltd", image: profileImage("Mr.S.Ajithkumar.webp"), linkedin: "https://www.linkedin.com/in/ajith-kumar-s-100033179?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" }] },
   "aids-2": {
     title: "Innovative IoT Design Using Advanced Intelligent Simulation Tools",
     resourcePersons: [{ name: "Dr. Naskath Jahangeer", designation: "IoT Simulation Expert", image: profileImage("Dr.J.Naskath.webp"), linkedin: "https://www.linkedin.com/in/naskath-jahangeer-31a3b6280?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" }]

@@ -289,36 +289,49 @@ const workshopData = [
   {
     id: "aids-1",
     dept: "AI & DS",
-    title: "n8n: AI-Driven Visual Workflow Automation",
-    shortDesc: "Build practical AI-powered automations without heavy coding.",
+    title: "Challenges of Emerging AI Agents in SaaS Platforms",
+    shortDesc: "Explore real-world challenges of deploying AI agents in SaaS systems.",
     color: "from-pink-600 to-purple-600",
     date: "March 25, 2026",
     time: "01:30 PM - 03:30 PM",
     start: "2026-03-25T13:30:00",
     end: "2026-03-25T15:30:00",
-    resourcePersons: [{ name: "Mr. Mahadevan B", designation: "Automation Architect", image: profileImage("Mr.B.Mahadevan.webp"), linkedin: "https://www.linkedin.com/in/mahadevan-b-5b617622?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" }],
+    resourcePersons: [{ name: "Mr.S.Ajithkumar", designation: "Module lead  - Embedded Software. Mistral solutions private limited, Bengaluru Mistral Solutions Pvt. Ltd", image: profileImage("Mr.S.Ajithkumar.webp"), linkedin: "https://www.linkedin.com/in/ajith-kumar-s-100033179?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" }],
     description: [
-      "Introduces n8n for visual workflow automation with API integrations and AI services.",
-      "Also discusses real deployment challenges for AI agents in SaaS: reliability, security, privacy, cost, and trust."
-    ],
-    topics: ["n8n workflows", "API and database integration", "LLM-enabled automation", "AI agents in SaaS", "Production reliability"]
+    "Explores the real-world challenges of integrating AI agents into SaaS platforms beyond demos and hype.",
+    "Discusses reliability issues, hallucination control, security risks, privacy concerns, cost scaling, and building user trust in AI-driven systems."
+  ],
+    topics: [
+    "Limitations of current AI agents",
+    "Security and privacy risks",
+    "Reliability and hallucination control",
+    "Architecture patterns for AI agent-based SaaS",
+    "Evaluating when AI agents are necessary"
+  ]
   },
   {
     id: "aids-2",
     dept: "AI & DS",
     title: "Innovative IoT Design Using Advanced Intelligent Simulation Tools",
-    shortDesc: "Design and test IoT systems virtually before deployment.",
+    shortDesc: "Design and test IoT systems virtually before real-world deployment.",
     color: "from-pink-500 to-rose-500",
     date: "March 25, 2026",
     time: "03:45 PM - 05:45 PM",
     start: "2026-03-25T15:45:00",
     end: "2026-03-25T17:45:00",
-    resourcePersons: [{ name: "Dr. Naskath Jahangeer", designation: "IoT Simulation Expert", image: profileImage("Dr.J.Naskath.webp"), linkedin: "https://www.linkedin.com/in/naskath-jahangeer-31a3b6280?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" }],
+    resourcePersons: [{ name: "Dr. Naskath Jahangeer", designation: "IoT Simulation Specialist", image: profileImage("Dr.J.Naskath.webp"), linkedin: "https://www.linkedin.com/in/naskath-jahangeer-31a3b6280?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" }],
     description: [
-      "Covers virtual prototyping of IoT systems including sensors, communication networks, and intelligent decision modules.",
-      "Emphasizes early design validation, optimization, and reduced development cost."
-    ],
-    topics: ["IoT architecture", "Network simulation", "Performance and delay analysis", "Power consumption modeling", "AI integration in simulations"]
+    "Introduces the design and testing of IoT systems using intelligent simulation tools before real-world deployment.",
+    "Participants will learn to model sensors, communication networks, and smart decision systems in a virtual environment to analyze performance, reliability, and efficiency."
+  ],
+    topics: [
+    "IoT system architecture (Sensors → Gateway → Cloud → Analytics)",
+    "Designing and simulating IoT networks",
+    "Power consumption and communication delay analysis",
+    "System reliability evaluation",
+    "AI integration in IoT simulations",
+    "Virtual prototyping to reduce cost and development time"
+  ]
   },
   {
     id: "sh-1",
@@ -612,7 +625,7 @@ const detailedWorkshopOverrides = {
   },
   "aids-1": {
     resourcePersons: [
-      { name: "Mr. Mahadevan B", designation: "Automation Architect", image: profileImage("Mr.B.Mahadevan.webp"), linkedin: "https://www.linkedin.com/in/mahadevan-b-5b617622?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" }
+      { name: "Mr .S.Ajithkumar", designation: "Module lead  - Embedded Software. Mistral solutions private limited, Bengaluru Mistral Solutions Pvt. Ltd", image: profileImage("Mr.S.Ajithkumar.webp"), linkedin: "https://www.linkedin.com/in/ajith-kumar-s-100033179?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" }
     ],
     description: [
       "This workshop introduces n8n, a node-based automation platform for visual workflow design without heavy coding.",
