@@ -175,6 +175,8 @@ const Signup = () => {
                     <option value="MECH">MECH</option>
                     <option value="CIVIL">CIVIL</option>
                     <option value="AI&DS">AI & DS</option>
+                    <option value="S&H">S&H</option>
+                    <option value="OTHERS">OTHERS</option>
                   </select>
                 </div>
               )}

@@ -6,8 +6,8 @@ import QrScannerPanel from '../components/QrScannerPanel';
 import { useConference } from '../context/ConferenceContext';
 import { 
   Download, Users, DollarSign, LogOut, CheckCircle, Clock, Loader2, 
-  Shield, XCircle, BarChart3, TrendingUp, Eye, Filter, Mail, CalendarCheck, Check, X, Search, ChevronDown,
-  QrCode
+  Shield, XCircle, BarChart3, TrendingUp, Eye, Filter, Mail, Menu, CalendarCheck, Check, X, Search, ChevronDown,
+  Database, QrCode
 } from 'lucide-react';
 
 // some event entries use `title` rather than `name` - helper to extract display text
@@ -61,6 +61,32 @@ const toEventArray = (value) => {
   return [];
 };
 
+const STATUS_STORAGE_KEY = 'nec-admin-user-statuses';
+
+const loadStoredUserStatuses = () => {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.localStorage.getItem(STATUS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const persistUserStatuses = (payload) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(STATUS_STORAGE_KEY, JSON.stringify(payload));
+  } catch {
+    // ignore storage errors
+  }
+};
+
+const deriveUserStatusKey = (user) => {
+  if (!user) return 'unknown';
+  return user._id || user.userId || user.email || user.pid || user.name || 'unknown';
+};
+
 // --- Helper Components ---
 
 const StatCard = ({ icon, label, value, color }) => {
@@ -79,8 +105,8 @@ const StatCard = ({ icon, label, value, color }) => {
         {React.cloneElement(icon, { className: `w-5 h-5 ${theme.text}` })}
       </div>
       <div>
-        <p className="text-gray-400 text-[10px] uppercase tracking-wider font-bold">{label}</p>
-        <h3 className="text-2xl font-bold text-white">{value}</h3>
+        <p className="text-gray-400 text-[10px] uppercase tracking-wider font-bold font-orbitron">{label}</p>
+        <h3 className="text-2xl font-bold text-white font-orbitron tracking-[0.3em]">{value}</h3>
       </div>
     </div>
   );
@@ -124,6 +150,43 @@ const StatusBadge = ({ status }) => {
   );
 };
 
+const ADMIN_TABS = [
+  { id: 'dashboard', label: 'Dashboard', icon: <BarChart3 size={18} />, description: 'KPIs plus reminder controls' },
+  { id: 'active-users', label: 'Active Users', icon: <Eye size={18} />, description: 'Live list from the last 30 minutes' },
+  { id: 'analytics', label: 'Analytics', icon: <TrendingUp size={18} />, description: 'Department & event insights' },
+  { id: 'db-status', label: 'Database Status', icon: <Database size={18} />, description: 'Toggle active/inactive and view every record' },
+  { id: 'reports', label: 'Registrations', icon: <Download size={18} />, description: 'Filtered, export-ready registrations' },
+  { id: 'qr-scanner', label: 'QR Scanner', icon: <QrCode size={18} />, description: 'Verify participants on the fly' },
+  { id: 'attendance', label: 'Attendance', icon: <CalendarCheck size={18} />, description: 'Mark day-wise attendance' }
+];
+
+const AdminTabList = ({ activeTab, onSelectTab, onAfterSelect, className = '' }) => (
+  <nav className={`space-y-3 ${className}`}>
+    {ADMIN_TABS.map(tab => (
+      <button
+        key={tab.id}
+        onClick={() => {
+          onSelectTab(tab.id);
+          onAfterSelect?.();
+        }}
+        className={`w-full flex items-center gap-3 rounded-2xl px-4 py-3 transition-all text-left ${
+          activeTab === tab.id
+            ? 'bg-purple-500/20 border border-purple-400 text-white shadow-[0_15px_40px_rgba(148,77,255,0.35)]'
+            : 'text-gray-300 hover:text-white hover:bg-purple-500/10'
+        }`}
+      >
+        <span className={`p-2 rounded-full transition ${activeTab === tab.id ? 'bg-purple-500/30 text-white' : 'bg-white/5 text-purple-300'}`}>
+          {tab.icon}
+        </span>
+        <div className="flex-1">
+          <p className="text-sm font-semibold leading-snug">{tab.label}</p>
+          <p className="text-[11px] text-gray-400 leading-tight">{tab.description}</p>
+        </div>
+      </button>
+    ))}
+  </nav>
+);
+
 // --- Main Component ---
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -149,15 +212,34 @@ const AdminDashboard = () => {
   const [departments, setDepartments] = useState([]);
   const[events, setEvents] = useState(CONFERENCE_EVENT_NAMES);
   const [stats, setStats] = useState({});
+  const [userStatuses, setUserStatuses] = useState(() => loadStoredUserStatuses());
+  const [dbSearchTerm, setDbSearchTerm] = useState('');
+  const [dbStatusFilter, setDbStatusFilter] = useState('All');
   
   const [emailLoading, setEmailLoading] = useState(false);
   const[emailMessage, setEmailMessage] = useState(null);
   
   const [eventsOpen, setEventsOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const eventsRef = useRef(null);
   const isLoggingOut = useRef(false);
   const [attendanceRows, setAttendanceRows] = useState([]);
+  const getUserStatusValue = (user) => {
+    const key = deriveUserStatusKey(user);
+    return userStatuses[key] || 'active';
+  };
 
+  const isUserActive = (user) => getUserStatusValue(user) === 'active';
+
+  const toggleUserStatus = (user) => {
+    const key = deriveUserStatusKey(user);
+    setUserStatuses((prev) => {
+      const nextStatus = prev[key] === 'inactive' ? 'active' : 'inactive';
+      const next = { ...prev, [key]: nextStatus };
+      persistUserStatuses(next);
+      return next;
+    });
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -169,7 +251,18 @@ const AdminDashboard = () => {
     document.addEventListener('click', onDocClick);
     return () => document.removeEventListener('click', onDocClick);
   },[]);
-  
+
+  useEffect(() => {
+    if (!isSidebarOpen) return undefined;
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setIsSidebarOpen(false);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isSidebarOpen]);
+
   const ALL_DEPARTMENTS =['CSE', 'ECE', 'EEE', 'Mechanical', 'Civil', 'IT', 'SH'];
   // Check Auth & Fetch Data
   useEffect(() => {
@@ -193,12 +286,12 @@ const AdminDashboard = () => {
       }
 
       try {
-        const mainRes = await axios.get('http://localhost:5200/conference/api/admin/registrations', {
-          headers: { Authorization: `Bearer ${token}` }
-        }).catch(err => {
-          console.error("Main data error:", err);
-          return { data: { registrations:[], stats: {} } };
-        });
+      const mainRes = await axios.get('http://localhost:5200/conference/api/admin/registrations', {
+        headers: { Authorization: `Bearer ${token}` }
+      }).catch(err => {
+        console.error("Main data error:", err);
+        return { data: { registrations: [], stats: {} } };
+      });
 
         const registrationRows = mainRes.data.registrations || [];
         const transactionRows = mainRes.data.transactions || [];
@@ -213,7 +306,7 @@ const AdminDashboard = () => {
             .map((r) => [String(r.email).toLowerCase(), r])
         );
 
-        const rawData = transactionRows.length > 0 ? transactionRows : registrationRows;
+        const rawData = [...registrationRows, ...transactionRows];
 
         // Normalize/flatten backend registration objects so frontend can read fields like
         // `user.name`, `user.email`, `user.paymentAmount`, `user.paymentStatus`, etc.
@@ -317,7 +410,7 @@ const AdminDashboard = () => {
         const actualEventNames = Array.from(
           new Set(
             enhancedData
-              .flatMap((item) => item.selectedEvents ||[])
+              .flatMap((item) => item.selectedEvents || [])
               .map((e) => getEventDisplayName(e))
               .filter(Boolean)
           )
@@ -327,31 +420,42 @@ const AdminDashboard = () => {
         );
         setEvents(mergedEventNames);
 
-        const activeRes = await axios.get('http://localhost:5200/conference/api/admin/active-users?minutes=30', {
-          headers: { Authorization: `Bearer ${token}` }
-        }).catch(err => {
-          console.error("Active users error:", err);
-          return { data: { users:[] } };
-        });
-        setActiveUsers(activeRes.data.users ||[]);
+        setLoading(false); // core data ready, let UI hydrate immediately
 
-        const deptRes = await axios.get('http://localhost:5200/conference/api/admin/analytics/department', {
-          headers: { Authorization: `Bearer ${token}` }
-        }).catch(err => {
-          console.error("Dept analytics error:", err);
-          return { data: {} };
-        });
-        setDeptAnalytics(deptRes.data || {});
+        const extraRequests = await Promise.allSettled([
+          axios.get('http://localhost:5200/conference/api/admin/active-users?minutes=30', {
+            headers: { Authorization: `Bearer ${token}` }
+          }),
+          axios.get('http://localhost:5200/conference/api/admin/analytics/department', {
+            headers: { Authorization: `Bearer ${token}` }
+          }),
+          axios.get('http://localhost:5200/conference/api/admin/analytics/events', {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+        ]);
 
-        const eventRes = await axios.get('http://localhost:5200/conference/api/admin/analytics/events', {
-          headers: { Authorization: `Bearer ${token}` }
-        }).catch(err => {
-          console.error("Event analytics error:", err);
-          return { data: {} };
-        });
-        setEventAnalytics(eventRes.data || {});
+        const [activeRes, deptRes, eventRes] = extraRequests;
 
-        setLoading(false);
+        if (activeRes.status === 'fulfilled') {
+          setActiveUsers(activeRes.value.data.users || []);
+        } else {
+          console.error("Active users error:", activeRes.reason);
+          setActiveUsers([]);
+        }
+
+        if (deptRes.status === 'fulfilled') {
+          setDeptAnalytics(deptRes.value.data || {});
+        } else {
+          console.error("Dept analytics error:", deptRes.reason);
+          setDeptAnalytics({});
+        }
+
+        if (eventRes.status === 'fulfilled') {
+          setEventAnalytics(eventRes.value.data || {});
+        } else {
+          console.error("Event analytics error:", eventRes.reason);
+          setEventAnalytics({});
+        }
       } catch (error) {
         console.error("Error fetching admin data", error);
         setLoading(false);
@@ -364,7 +468,8 @@ const AdminDashboard = () => {
   }, [navigate]);
 
   // Filtering Logic
-  const getFilteredDataFrom = (input) => {
+  const getFilteredDataFrom = (input, options = {}) => {
+    const { hideInactive = false } = options;
     let data = input;
 
     if (searchTerm) {
@@ -401,11 +506,15 @@ const AdminDashboard = () => {
       }
     }
 
+    if (hideInactive) {
+      data = data.filter(user => isUserActive(user));
+    }
+
     return data;
   };
 
-  const displayData = getFilteredDataFrom(attendees);
-  const attendanceDisplayData = getFilteredDataFrom(attendanceRows);
+  const displayData = getFilteredDataFrom(attendees, { hideInactive: true });
+  const attendanceDisplayData = getFilteredDataFrom(attendanceRows, { hideInactive: true });
 
   // Filter dropdown events
   const filteredDropdownEvents = events.filter(ev => {
@@ -413,6 +522,31 @@ const AdminDashboard = () => {
     const term = eventSearchTerm ? eventSearchTerm.toLowerCase() : '';
     return ev.toLowerCase().includes(term);
   });
+
+  const dbStatusRows = attendees.map(user => ({
+    ...user,
+    status: getUserStatusValue(user)
+  }));
+
+  const dbStatusDisplayData = dbStatusRows.filter(user => {
+    if (dbStatusFilter !== 'All' && user.status.toLowerCase() !== dbStatusFilter.toLowerCase()) {
+      return false;
+    }
+    if (!dbSearchTerm) {
+      return true;
+    }
+    const lower = dbSearchTerm.toLowerCase();
+    return (
+      (user.name && user.name.toLowerCase().includes(lower)) ||
+      (user.email && user.email.toLowerCase().includes(lower)) ||
+      (user.department && user.department.toLowerCase().includes(lower))
+    );
+  });
+
+  const dbStatusSummary = {
+    active: dbStatusRows.filter(user => user.status === 'active').length,
+    inactive: dbStatusRows.filter(user => user.status === 'inactive').length,
+  };
 
   // Attendance Toggle (just update local state; save later)
   const handleAttendanceToggle = (userId, day) => {
@@ -548,7 +682,7 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#05020a] text-white pt-10 pb-12 px-4 sm:px-6 font-['Orbitron'] relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#05020a] text-white pt-10 pb-12 px-4 sm:px-6 font-['Orbitron'] relative overflow-x-hidden text-sm sm:text-base">
       
       {/* Background Glow */}
       <div className="fixed inset-0 pointer-events-none">
@@ -557,7 +691,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Header */}
-      <div className="relative z-10 max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center mb-10 gap-6 border-b border-purple-500/20 pb-6">
+      <div className="relative z-10 w-full flex flex-col md:flex-row justify-between items-center mb-10 gap-6 border-b border-purple-500/20 pb-6 px-4 lg:px-8">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-purple-500/10 rounded-xl border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.3)]">
             <Shield className="text-purple-400 w-8 h-8" />
@@ -581,40 +715,43 @@ const AdminDashboard = () => {
       </div>
 
       {/* Top Stats Cards */}
-      <div className="relative z-10 max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
+      <div className="relative z-10 w-full grid grid-cols-1 md:grid-cols-4 gap-4 mb-10 px-4 lg:px-0">
         <StatCard icon={<Users className="w-6 h-6" />} label="Total Users" value={stats.totalUsers || 0} color="blue" />
         <StatCard icon={<Eye className="w-6 h-6" />} label="Active Now" value={activeNow} color="green" />
         <StatCard icon={<CheckCircle className="w-6 h-6" />} label="Paid" value={paidCount} color="pink" />
         <StatCard icon={<DollarSign className="w-6 h-6" />} label="Revenue" value={`₹${totalRevenue.toLocaleString()}`} color="purple" />
       </div>
 
-      {/* Tab Navigation */}
-      <div className="relative z-10 max-w-7xl mx-auto mb-8 flex gap-2 border-b border-purple-500/20 overflow-x-auto">
-        {[
-          { id: 'dashboard', label: 'Dashboard', icon: <BarChart3 size={18} /> },
-          { id: 'active-users', label: 'Active Users', icon: <Eye size={18} /> },
-          { id: 'analytics', label: 'Analytics', icon: <TrendingUp size={18} /> },
-          { id: 'reports', label: 'Registrations', icon: <Download size={18} /> },
-          { id: 'qr-scanner', label: 'QR Scanner', icon: <QrCode size={18} /> },
-          { id: 'attendance', label: 'Attendance', icon: <CalendarCheck size={18} /> }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-6 py-3 text-sm font-bold tracking-wide transition-all whitespace-nowrap ${
-              activeTab === tab.id
-                ? 'text-purple-400 border-b-2 border-purple-400 bg-purple-500/5'
-                : 'text-gray-400 hover:text-purple-300'
-            }`}
-          >
-            {tab.icon} {tab.label}
-          </button>
-        ))}
-      </div>
+
+      <div className="relative z-10 w-full space-y-8 px-4 lg:px-8">
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="flex-shrink-0 w-full lg:w-72">
+            <div className="flex items-center justify-between mb-3 lg:hidden">
+              <p className="text-xs font-semibold uppercase tracking-[0.4em] text-purple-300">Menu</p>
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(true)}
+                className="p-2 rounded-lg border border-purple-500/30 bg-white/5 text-white hover:bg-white/10 transition-all"
+              >
+                <Menu size={20} />
+                <span className="sr-only">Open admin menu</span>
+              </button>
+            </div>
+            <div className="hidden lg:block">
+              <div className="max-h-[calc(100vh-5rem)] overflow-y-auto pb-4">
+                <AdminTabList
+                  activeTab={activeTab}
+                  onSelectTab={setActiveTab}
+                  className="w-full bg-[#12051f]/80 border border-purple-500/20 rounded-2xl p-4 shadow-2xl sticky lg:top-24"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="flex-1 space-y-8">
 
       {/* DASHBOARD TAB */}
       {activeTab === 'dashboard' && (
-        <div className="relative z-10 max-w-7xl mx-auto space-y-8">
+        <div className="relative z-10 w-full space-y-8">
           {emailMessage && (
             <div className={`p-4 rounded-lg border ${emailMessage.type === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
               <p className="text-sm font-bold">{emailMessage.text}</p>
@@ -650,7 +787,7 @@ const AdminDashboard = () => {
 
       {/* ACTIVE USERS TAB */}
       {activeTab === 'active-users' && (
-        <div className="relative z-10 max-w-7xl mx-auto">
+        <div className="relative z-10 w-full">
           <div className="bg-[#130720]/80 backdrop-blur-xl border border-purple-500/20 p-6 rounded-2xl shadow-2xl">
             <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
               <Eye className="text-green-400" size={24} />
@@ -675,7 +812,10 @@ const AdminDashboard = () => {
                   </thead>
                   <tbody>
                     {activeUsers.map((user, idx) => (
-                      <tr key={idx} className="border-b border-purple-500/10 hover:bg-purple-500/5 transition-colors">
+                      <tr
+                        key={`${user.email || user._id || 'active'}-${idx}`}
+                        className="border-b border-purple-500/10 hover:bg-purple-500/5 transition-colors"
+                      >
                         <td className="py-3 px-4 text-white font-medium">{user.name}</td>
                         <td className="py-3 px-4 text-gray-300">{user.email}</td>
                         <td className="py-3 px-4 text-gray-300">{user.department}</td>
@@ -695,7 +835,7 @@ const AdminDashboard = () => {
 
       {/* ANALYTICS TAB */}
       {activeTab === 'analytics' && (
-        <div className="relative z-10 max-w-7xl mx-auto space-y-8">
+        <div className="relative z-10 w-full space-y-8">
           <div className="bg-[#130720]/80 backdrop-blur-xl border border-purple-500/20 p-6 rounded-2xl shadow-2xl">
             <h2 className="text-xl font-bold mb-6">Department-wise Analytics</h2>
             <div className="overflow-x-auto">
@@ -756,9 +896,145 @@ const AdminDashboard = () => {
         </div>
       )}
 
+      {/* DATABASE STATUS TAB */}
+      {activeTab === 'db-status' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <StatusCard label="Active Records" value={dbStatusSummary.active} color="green" />
+            <StatusCard label="Inactive Records" value={dbStatusSummary.inactive} color="red" />
+            <StatCard icon={<Users className="w-6 h-6" />} label="Total Database" value={dbStatusRows.length} color="pink" />
+          </div>
+
+          <div className="bg-[#130720]/80 backdrop-blur-xl border border-purple-500/20 p-6 rounded-2xl shadow-2xl w-full">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+              <div className="flex-1">
+                <label className="text-[11px] text-purple-200 uppercase tracking-widest block mb-1">Search Records</label>
+                <input
+                  type="text"
+                  placeholder="Name, email, department..."
+                  className="w-full bg-[#0a0412] border border-purple-500/30 text-white px-3 py-2 rounded-lg focus:outline-none focus:border-pink-500 text-sm"
+                  value={dbSearchTerm}
+                  onChange={(e) => setDbSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="sm:w-40">
+                <label className="text-[11px] text-purple-200 uppercase tracking-widest block mb-1">Status View</label>
+                <select
+                  value={dbStatusFilter}
+                  onChange={(e) => setDbStatusFilter(e.target.value)}
+                  className="w-full bg-[#0a0412] border border-purple-500/30 text-white px-3 py-2 rounded-lg focus:border-pink-500 outline-none text-sm cursor-pointer"
+                >
+                  <option value="All">All</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 mt-3">
+              Viewing <strong className="text-white">{dbStatusDisplayData.length}</strong> of <strong className="text-white">{dbStatusRows.length}</strong> records.
+            </p>
+          </div>
+
+          <div className="bg-[#130720]/80 backdrop-blur-xl border border-purple-500/20 p-6 rounded-2xl shadow-2xl overflow-hidden relative w-full">
+            <h3 className="text-lg font-bold mb-4 text-purple-200">Database Content</h3>
+            <div className="overflow-x-auto overflow-y-auto max-h-[70vh] px-1">
+              <table className="w-full min-w-[1100px] lg:min-w-[1300px] text-[11px] sm:text-sm table-auto">
+                <thead className="text-purple-200 border-b border-purple-500/30">
+                  <tr>
+                    <th className="text-left py-3 px-3 sm:px-4 font-orbitron uppercase text-[10px] sm:text-[11px] tracking-[0.3em] whitespace-nowrap">Name</th>
+                    <th className="text-left py-3 px-3 sm:px-4 font-orbitron uppercase text-[10px] sm:text-[11px] tracking-[0.3em] whitespace-nowrap">PID</th>
+                    <th className="text-left py-3 px-3 sm:px-4 font-orbitron uppercase text-[10px] sm:text-[11px] tracking-[0.3em] whitespace-nowrap">Email</th>
+                    <th className="text-left py-3 px-3 sm:px-4 font-orbitron uppercase text-[10px] sm:text-[11px] tracking-[0.3em] whitespace-nowrap">Dept</th>
+                    <th className="text-center py-3 px-3 sm:px-4 font-orbitron uppercase text-[10px] sm:text-[11px] tracking-[0.3em] whitespace-nowrap">Count</th>
+                    <th className="text-left py-3 px-3 sm:px-4 font-orbitron uppercase text-[10px] sm:text-[11px] tracking-[0.3em] whitespace-nowrap">Events Registered</th>
+                    <th className="text-center py-3 px-3 sm:px-4 font-orbitron uppercase text-[10px] sm:text-[11px] tracking-[0.3em] whitespace-nowrap">Amount</th>
+                    <th className="text-center py-3 px-3 sm:px-4 font-orbitron uppercase text-[10px] sm:text-[11px] tracking-[0.3em] whitespace-nowrap">Status</th>
+                    <th className="text-center py-3 px-3 sm:px-4 font-orbitron uppercase text-[10px] sm:text-[11px] tracking-[0.3em] whitespace-nowrap">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dbStatusDisplayData.map((user, idx) => (
+                    <tr
+                      key={`${user._id || user.email || 'status'}-${idx}`}
+                      className="border-b border-purple-500/10 hover:bg-white/5 transition-colors"
+                    >
+                      <td className="py-3 px-3 sm:px-4 font-orbitron font-semibold text-white tracking-[0.2em]">{user.name || 'Unknown'}</td>
+                      <td className="py-3 px-3 sm:px-4 font-mono text-cyan-200 tracking-[0.2em]">{user.pid || '—'}</td>
+                      <td className="py-3 px-3 sm:px-4 font-mono text-cyan-300 break-words tracking-[0.1em]">{user.email || '-'}</td>
+                      <td className="py-3 px-3 sm:px-4 font-orbitron text-purple-200 tracking-[0.2em]">{user.department}</td>
+                      <td className="py-3 px-3 sm:px-4 text-center">
+                        <span className="inline-flex items-center justify-center w-10 h-10 rounded-full border border-blue-500/40 text-blue-200 font-orbitron text-sm">
+                          {(user.selectedEvents || []).length}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 sm:px-4">
+                        <div className="flex flex-col gap-2 w-full">
+                          {(user.selectedEvents || []).map((evt, evIdx) => (
+                            <div
+                              key={evIdx}
+                              className="flex items-start gap-3 px-4 py-2.5 rounded-2xl border border-purple-500/40 bg-gradient-to-br from-[#1a0420] to-[#1c0435] text-sm text-purple-100 shadow-inner w-full"
+                            >
+                              <span className="h-2 w-2 rounded-full bg-pink-400 mt-1 shrink-0" />
+                              <span className="leading-snug text-[13px] font-orbitron">{evt.name}</span>
+                            </div>
+                          ))}
+                          {(user.selectedEvents || []).length === 0 && (
+                            <span className="text-red-400 text-xs italic">No events selected</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 sm:px-4 text-center">
+                        <span className="text-[11px] font-orbitron font-semibold px-3 py-1 rounded-full border border-purple-500 text-purple-200 bg-purple-500/5">
+                          ₹{user.paymentAmount || 0}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 sm:px-4 text-center">
+                        <span className={`text-[11px] font-orbitron font-semibold px-3 py-1 rounded-full border ${
+                          user.paymentStatus === 'Paid'
+                            ? 'border-green-400 text-green-300 bg-green-500/10'
+                            : user.paymentStatus === 'Failed'
+                              ? 'border-red-400 text-red-300 bg-red-500/10'
+                              : 'border-yellow-400 text-yellow-300 bg-yellow-500/10'
+                        }`}>
+                          {user.paymentStatus || 'Pending'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 sm:px-4 text-center">
+                        <span className={`text-[11px] font-orbitron font-semibold px-3 py-1 rounded-full border ${
+                          user.status === 'active'
+                            ? 'border-green-400 text-green-300 bg-green-500/10'
+                            : 'border-red-400 text-red-300 bg-red-500/10'
+                        }`}>
+                          {user.status === 'active' ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 sm:px-4 text-center">
+                        <button
+                          onClick={() => toggleUserStatus(user)}
+                          className={`text-[11px] font-semibold tracking-widest px-3 py-1.5 rounded-full border transition ${
+                            user.status === 'active'
+                              ? 'text-red-300 border-red-400 hover:bg-red-500/20 hover:border-red-300'
+                              : 'text-green-300 border-green-400 hover:bg-green-500/20 hover:border-green-300'
+                          }`}
+                        >
+                          {user.status === 'active' ? 'Mark Inactive' : 'Reactivate'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {dbStatusDisplayData.length === 0 && (
+              <div className="text-center py-10 text-gray-500 italic">No records match the current filters.</div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* REGISTRATIONS TAB (REPORTS) */}
       {activeTab === 'reports' && (
-        <div className="relative z-10 max-w-7xl mx-auto space-y-8">
+        <div className="relative z-10 w-full space-y-8">
           
           {/* Export Controls */}
           <div className="bg-[#130720]/80 backdrop-blur-xl border border-purple-500/20 p-6 rounded-2xl shadow-2xl relative z-50">
@@ -961,7 +1237,10 @@ const AdminDashboard = () => {
                   {displayData.map((user, idx) => {
                     const eventCount = user.selectedEvents?.length || 0;
                     return (
-                      <tr key={idx} className="border-b border-purple-500/10 hover:bg-purple-500/5 transition-colors">
+                      <tr
+                        key={`${user._id || user.email || user.pid || 'reg'}-${idx}`}
+                        className="border-b border-purple-500/10 hover:bg-purple-500/5 transition-colors"
+                      >
                         
                         {/* Name */}
                         <td className="py-4 px-4 font-medium text-white align-top">
@@ -1044,31 +1323,31 @@ const AdminDashboard = () => {
 
       {/* --- ATTENDANCE TAB --- */}
       {activeTab === 'attendance' && (
-        <div className="relative z-10 max-w-7xl mx-auto space-y-6">
-          <div className="flex justify-between items-center bg-[#130720]/80 border border-purple-500/20 p-4 rounded-2xl">
+        <div className="relative z-10 w-full space-y-6">
+          <div className="flex flex-wrap justify-between items-center gap-3 bg-[#130720]/80 border border-purple-500/20 p-4 rounded-2xl">
             <h3 className="text-xl font-bold flex items-center gap-2 text-white">
               <CalendarCheck className="text-green-400" /> Attendance Marking
             </h3>
-            <div className="flex gap-4">
-                <input
-                  type="text"
-                  placeholder="Filter name/email..."
-                  className="bg-[#0a0412] border border-purple-500/30 text-white px-3 py-2 rounded-lg focus:outline-none focus:border-pink-500 text-sm w-64"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <button
-                  onClick={handleExportAttendance}
-                  className="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg flex items-center gap-2 text-sm shadow-lg"
-                >
-                  <Download size={16} /> Export Attendance
-                </button>
-                <button
-                  onClick={handleSaveAttendance}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg flex items-center gap-2 text-sm shadow-lg"
-                >
-                  Save Attendance
-                </button>
+            <div className="flex flex-wrap gap-3 items-center">
+              <input
+                type="text"
+                placeholder="Filter name/email..."
+                className="bg-[#0a0412] border border-purple-500/30 text-white px-3 py-2 rounded-lg focus:outline-none focus:border-pink-500 text-sm w-full max-w-xs"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <button
+                onClick={handleExportAttendance}
+                className="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg flex items-center gap-2 text-sm shadow-lg min-w-[150px] justify-center"
+              >
+                <Download size={16} /> Export Attendance
+              </button>
+              <button
+                onClick={handleSaveAttendance}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg flex items-center gap-2 text-sm shadow-lg min-w-[150px] justify-center"
+              >
+                Save Attendance
+              </button>
             </div>
           </div>
 
@@ -1117,6 +1396,50 @@ const AdminDashboard = () => {
             {attendanceDisplayData.length === 0 && (
                 <div className="text-center py-10 text-gray-500">No attendees match your search.</div>
             )}
+          </div>
+        </div>
+      )}
+          </div>
+        </div>
+      </div>
+      {isSidebarOpen && (
+        <div className="fixed inset-0 z-[1050] flex lg:hidden">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setIsSidebarOpen(false)} />
+          <div className="relative z-[1060] h-full w-[260px] bg-gradient-to-b from-[#5a0c91] to-[#25002f] shadow-2xl border-l border-white/10 flex flex-col">
+            <div className="px-5 py-6 border-b border-white/10 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.5em] text-white/70">Menu</p>
+                  <h3 className="text-xl font-bold tracking-wide leading-tight">NEC Conference</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="text-white hover:text-purple-200"
+                >
+                  <X size={24} />
+                  <span className="sr-only">Close admin menu</span>
+                </button>
+              </div>
+              <p className="mt-2 text-[11px] text-white/60">Conference Control Center</p>
+            </div>
+            <div className="px-5 py-6 space-y-3 flex-1">
+              <AdminTabList
+                activeTab={activeTab}
+                onSelectTab={setActiveTab}
+                onAfterSelect={() => setIsSidebarOpen(false)}
+                className="space-y-3"
+              />
+            </div>
+            <div className="px-5 pb-8 pt-4">
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full rounded-xl bg-pink-500 text-white text-sm font-semibold uppercase tracking-[0.2em] py-3 hover:bg-pink-400 transition"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       )}

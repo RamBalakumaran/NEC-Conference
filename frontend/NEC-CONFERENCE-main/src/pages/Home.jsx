@@ -201,48 +201,58 @@ const trackData = [
   },
 
   // --- IT DEPARTMENT ---
-  {
-    id: "it-1",
-    dept: "IT",
-    title: "Predictive Analytics Using ML in IoT",
-    shortDesc: "Forecast future events using real-time sensor data.",
-    color: "from-blue-400 to-cyan-400",
-    resourcePersons: [
-      { name: "Ms. Santhi Sankarappan", designation: "Intelligent Systems Expert", image: profileImage("Ms.S.Santhi.webp"), linkedin: "https://www.linkedin.com/in/santhi-sankarappan?utm_source=share_via&utm_content=profile&utm_medium=member_android" }
+{
+  id: "it-1",
+  dept: "IT",
+  title: "Predictive Analytics Using Machine Learning in IoT",
+  shortDesc: "Use ML with IoT sensor data to predict future events and system behavior.",
+  color: "from-blue-400 to-cyan-400",
+  resourcePersons: [
+     { name: "Dr. Dinesh Raj", designation: "IoT and ML Specialist", image: profileImage("Dr.Dinesh Raj.webp"), linkedin: "https://www.linkedin.com/in/dr-dinesh-raj-5aa7676a?utm_source=share_via&utm_content=profile&utm_medium=member_android"}
     ],
-    description: [
-      "Predictive Analytics Using Machine Learning in IoT is an exciting workshop designed for B.Tech students to explore how intelligent systems can forecast future events using real-time sensor data.",
-      "With the rapid growth of IoT devices in smart homes, healthcare, agriculture, manufacturing, and smart cities, massive amounts of data are generated every second. This workshop introduces students to how Machine Learning algorithms analyze this data to predict outcomes such as equipment failures, energy consumption, health risks, and traffic patterns.",
-      "Participants will gain foundational knowledge of IoT architecture, data preprocessing, and basic ML model development using popular tools like Python and Scikit-learn."
-    ],
-    topics: [
-      "IoT Architecture & Data Preprocessing",
-      "Machine Learning Algorithms for IoT",
-      "Predicting Equipment Failures & Energy Consumption",
-      "Hands-on with Python and Scikit-learn"
-    ]
-  },
-  {
-    id: "it-2",
-    dept: "IT",
-    title: "Predictive Analytics Using Machine Learning in IoT",
-    shortDesc: "Forecast future events using real-time IoT sensor data.",
-    color: "from-blue-500 to-indigo-500",
-    resourcePersons: [
-      { name: "AI Architect", designation: "Generative AI Lead", image: profileImage("Dr.Krishnamoorthy Dinesh.webp") }
-    ],
-    description: [
-      "This track focuses on the practical aspects of building autonomous AI Agents that can perceive, reason, and act to solve complex problems.",
-      "Participants will learn about the architecture of Agentic AI, exploring frameworks like LangChain and AutoGPT. The session covers prompting strategies, memory management, and tool usage.",
-      "Attendees will build a simple autonomous agent capable of browsing the web or interacting with APIs to complete multi-step tasks."
-    ],
-    topics: [
-      "Fundamentals of Agentic AI",
-      "LangChain & AutoGPT Frameworks",
-      "Prompt Engineering for Agents",
-      "Building Multi-step Reasoning Systems"
-    ]
-  },
+  description: [
+    "This workshop introduces predictive analytics using Machine Learning within IoT environments where large volumes of sensor data are continuously generated.",
+    "Participants learn how IoT devices in domains such as smart homes, healthcare, agriculture, manufacturing, and smart cities produce data that can be analyzed to forecast future events.",
+    "The session covers IoT architecture, data preprocessing techniques, and basic machine learning model development using tools like Python and Scikit-learn.",
+    "By the end of the workshop, students gain conceptual and practical knowledge to build intelligent, data-driven IoT solutions for real-world applications."
+  ],
+
+  topics: [
+    "Introduction to IoT architecture and data generation",
+    "Role of Machine Learning in predictive analytics",
+    "Data preprocessing and feature preparation",
+    "Building basic ML models using Python and Scikit-learn",
+    "Predicting events such as equipment failure and energy consumption",
+    "Applications in smart homes, healthcare, agriculture, and smart cities",
+    "Hands-on implementation session"
+  ]
+},
+{
+  id: "it-2",
+  dept: "IT",
+  title: "Predictive Analytics for Sustainable and Intelligent Systems",
+  shortDesc: "Data-driven forecasting and decision support for sustainable intelligent systems.",
+  color: "from-green-400 to-emerald-500",
+  resourcePersons: [
+    { name: "Ms. Anitha V", designation: "Data Analytics Expert", image: profileImage("Ms.V.Anitha.webp"), linkedin: "https://www.linkedin.com/in/anitha-v-?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" },
+    { name: "Ms. Santhi Sankarappan", designation: "Intelligent Systems Expert", image: profileImage("Ms.S.Santhi.webp"), linkedin: "https://www.linkedin.com/in/santhi-sankarappan?utm_source=share_via&utm_content=profile&utm_medium=member_android" }
+  ],
+  description: [
+    "This workshop introduces predictive analytics for designing sustainable and intelligent systems using data-driven forecasting and decision support techniques.",
+    "Participants explore how predictive models support applications such as energy management, climate forecasting, smart agriculture, and urban infrastructure.",
+    "The session combines conceptual foundations, methodological insights, and real-world case studies to understand predictive modeling in complex data environments.",
+    "It also highlights ethical AI practices including transparency, interpretability, and responsible use of predictive systems in sustainable technologies."
+  ],
+  topics: [
+    "Foundations of predictive analytics in sustainable systems",
+    "Data pipelines and preprocessing strategies",
+    "Core forecasting and predictive modeling methods",
+    "Predictive analytics for sustainability applications",
+    "Integration with intelligent system architectures",
+    "Model evaluation, validation, and explainability",
+    "Case study: energy load forecasting for smart systems"
+  ]
+},
 
   // --- ECE DEPARTMENT ---
       {
@@ -461,8 +471,8 @@ const trackData = [
 const detailedTrackOverrides = {
   "eee-2": {
     resourcePersons: [
-        { name: "Raja Subramanian", designation: "Director of Leadership in Semiconductor Innovation, Mistral Solutions (an AXISCADES Technologies Company)", image: profileImage("Mr.Raja Subramanian.webp"), linkedin: "https://www.linkedin.com/in/raja-subramanian-1390479?utm_source=share_via&utm_content=profile&utm_medium=member_android" }
-      ],
+      { name: "Mr. Sreeraj", designation: "Director - Technical and Operations, EmCog Solutions Pvt. Ltd., Chennai", image: profileImage("Mr.Sreeraj.webp"), linkedin: "https://www.linkedin.com/in/s-v-sreeraj-8195371a7?utm_source=share_via&utm_content=profile&utm_medium=member_android" }
+    ],
     description: [
       "The Department of Electrical and Electronics Engineering is organizing a one-day hands-on workshop on EV Technology and Battery Management Systems on March 25, 2026 for engineering students.",
       "The workshop provides structured and practical understanding of LFP cell characteristics, battery pack design methodology, BMS interfacing, cell balancing strategies, and State of Charge estimation techniques."
@@ -511,13 +521,18 @@ const detailedTrackOverrides = {
   "mech-3": { resourcePersons: [{ name: "Dr. M. Vivekanandan", designation: "Immersive Technology Expert", image: profileImage("Dr.M.Vivekanandan.webp"), linkedin: "https://www.linkedin.com/in/dr-m-vivekanandan-a714504b?utm_source=share_via&utm_content=profile&utm_medium=member_android" }] },
   "civil-2": { resourcePersons: [{ name: "Dr. Gagarin Guru", designation: "Environmental and Water Resources Expert", image: profileImage("Mr.Gagarin guru.webp"), linkedin: "https://www.linkedin.com/in/gagarin-guru-5125ab53/" }] },
   "it-1": {
+    title: "Predictive Analytics Using Machine Learning in IoT",
+    resourcePersons: [
+      { name: "Dr. Dinesh Raj", designation: "IoT and ML Specialist", image: profileImage("Dr.Dinesh Raj.webp"), linkedin: "https://www.linkedin.com/in/dr-dinesh-raj-5aa7676a?utm_source=share_via&utm_content=profile&utm_medium=member_android" }
+    ]
+  },
+  "it-2": {
     title: "Predictive Analytics for Sustainable and Intelligent Systems",
     resourcePersons: [
       { name: "Ms. Anitha V", designation: "Data Analytics Expert", image: profileImage("Ms.V.Anitha.webp"), linkedin: "https://www.linkedin.com/in/anitha-v-?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" },
       { name: "Ms. Santhi Sankarappan", designation: "Intelligent Systems Expert", image: profileImage("Ms.S.Santhi.webp"), linkedin: "https://www.linkedin.com/in/santhi-sankarappan?utm_source=share_via&utm_content=profile&utm_medium=member_android" }
     ]
   },
-  "it-2": { resourcePersons: [{ name: "Dr. Dinesh Raj", designation: "IoT and ML Specialist", image: profileImage("Dr.Dinesh Raj.webp"), linkedin: "https://www.linkedin.com/in/dr-dinesh-raj-5aa7676a?utm_source=share_via&utm_content=profile&utm_medium=member_android" }] },
   "cse-1": {
     title: "Quantum Computing: From Qubits to Contemporary Applications (Virtual session)",
     resourcePersons: [{ name: "Dr. Krishnamoorthy Dinesh", designation: "Assistant Professor, IIT Palakkad", image: profileImage("Dr.Krishnamoorthy Dinesh.webp"), linkedin: "https://www.linkedin.com/in/dinesh-krishnamoorthy-21bb641b?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" }]

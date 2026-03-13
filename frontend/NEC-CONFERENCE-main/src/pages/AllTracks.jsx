@@ -22,9 +22,9 @@ const workshopData = [
     shortDesc: "Hands-on workshop on embedded systems and IoT development.",
     color: "from-yellow-400 to-orange-500",
     date: "March 25, 2026",
-    time: "09:00 AM - 11:00 AM",
-    start: "2026-03-25T09:00:00",
-    end: "2026-03-25T11:00:00",
+    time: "09:30 AM - 12:30 PM",
+    start: "2026-03-25T09:30:00",
+    end: "2026-03-25T12:30:00",
     resourcePersons: [
       { name: "Dr. B. Venkatasamy", designation: "AP(SG)/EEE", image: profileImage("Dr.B.Venkatasamy.webp"), linkedin: "" },
       { name: "Mr. F. Antony Jeffrey Vaz", designation: "AP/EEE", image: profileImage("Mr.F.Antony Jeffrey Vaz.webp"), linkedin: "" }
@@ -49,9 +49,9 @@ const workshopData = [
     shortDesc: "LFP cells, battery pack design, and BMS interfacing.",
     color: "from-yellow-500 to-amber-600",
     date: "March 25, 2026",
-    time: "11:15 AM - 01:15 PM",
-    start: "2026-03-25T11:15:00",
-    end: "2026-03-25T13:15:00",
+    time: "02:00 PM - 05:00 PM",
+    start: "2026-03-25T14:00:00",
+    end: "2026-03-25T17:00:00",
     resourcePersons: [
       { name: "Mr. Sreeraj", designation: "Director - Technical and Operations, EmCog Solutions Pvt. Ltd., Chennai", image: profileImage("Mr.Sreeraj.webp"), linkedin: "https://www.linkedin.com/in/s-v-sreeraj-8195371a7" }
     ],
@@ -75,9 +75,9 @@ const workshopData = [
     shortDesc: "Data-driven manufacturing workflow aligned with Industry 4.0.",
     color: "from-red-500 to-rose-600",
     date: "March 14, 2026",
-    time: "09:30 AM - 11:00 AM",
-    start: "2026-03-14T09:30:00",
-    end: "2026-03-14T11:00:00",
+    time: "2:00 PM - 5:00 PM",
+    start: "2026-03-14T14:0:00",
+    end: "2026-03-14T17:00:00",
     resourcePersons: [
       { name: "Dr. K. Thoufiq Mohammed", designation: "Additive Manufacturing Expert", image: profileImage("Dr.K.Thoufiq Mohammed.webp"), linkedin: "https://www.linkedin.com/in/dr-k-thoufiq-mohammed-1207b1156" }
     ],
@@ -95,9 +95,9 @@ const workshopData = [
     shortDesc: "Bridge the gap between digital design and precision manufacturing.",
     color: "from-red-400 to-orange-500",
     date: "March 14, 2026",
-    time: "02:00 PM - 03:30 PM",
-    start: "2026-03-14T14:00:00",
-    end: "2026-03-14T15:30:00",
+    time: "11:30 AM - 01:00 PM",
+    start: "2026-03-14T11:30:00",
+    end: "2026-03-14T13:00:00",
     
     resourcePersons: [
       { name: "Dr. I. Sankar", designation: "Precision Engineering Expert", image: profileImage("Dr.I.Sankar.webp"), linkedin: "https://www.linkedin.com/in/dr-i-sankar-4496a7134" }
@@ -116,9 +116,9 @@ const workshopData = [
     shortDesc: "Immersive technologies for design, simulation, and collaboration.",
     color: "from-red-600 to-pink-600",
     date: "March 25, 2026",
-    time: "09:00 AM - 11:00 AM",
-    start: "2026-03-25T09:00:00",
-    end: "2026-03-25T11:00:00",
+    time: "10:00 AM - 11:30 AM",
+    start: "2026-03-25T10:00:00",
+    end: "2026-03-25T11:30:00",
     resourcePersons: [
       { name: "Dr. M. Vivekanandan", designation: "Immersive Technology Expert", image: profileImage("Dr.M.Vivekanandan.webp"), linkedin: "https://www.linkedin.com/in/dr-m-vivekanandan-a714504b" }
     ],
@@ -135,9 +135,9 @@ const workshopData = [
     shortDesc: "PlanSwift-driven estimation and TILOS-based linear scheduling.",
     color: "from-orange-400 to-amber-500",
     date: "March 25, 2026",
-    time: "11:15 AM - 01:15 PM",
-    start: "2026-03-25T11:15:00",
-    end: "2026-03-25T13:15:00",
+    time: "10:00 AM - 12:00 PM",
+    start: "2026-03-25T10:00:00",
+    end: "2026-03-25T13:00:00",
     resourcePersons: [{ name: "Planning Engineer", designation: "Infrastructure Planning Specialist", image: profileImage("Mr.Gagarin guru.webp"), linkedin: "" }],
     description: [
       "Industry-oriented workshop on modern construction planning tools for highways, railways, metros, and pipelines.",
@@ -152,9 +152,9 @@ const workshopData = [
     shortDesc: "Laboratory testing and sustainable usage assessment.",
     color: "from-orange-300 to-yellow-500",
     date: "March 25, 2026",
-    time: "01:30 PM - 03:30 PM",
-    start: "2026-03-25T13:30:00",
-    end: "2026-03-25T15:30:00",
+    time: "02:00 PM - 04:00 PM",
+    start: "2026-03-25T14:00:00",
+    end: "2026-03-25T16:00:00",
     resourcePersons: [{ name: "Dr. Gagarin Guru", designation: "Environmental and Water Resources Expert", image: profileImage("Mr.Gagarin guru.webp"), linkedin: "https://www.linkedin.com/in/gagarin-guru-5125ab53/" }],
     description: [
       "Focuses on potable water safety through physical, chemical, and microbiological analysis using standardized kits and methods.",
@@ -165,39 +165,61 @@ const workshopData = [
   {
     id: "it-1",
     dept: "IT",
-    title: "Predictive Analytics for Sustainable and Intelligent Systems",
-    shortDesc: "Data-driven forecasting and decision support.",
+    title: "Predictive Analytics Using Machine Learning in IoT",
+    shortDesc: "Use ML with IoT sensor data to predict future events and system behavior.",
     color: "from-blue-400 to-cyan-400",
     date: "March 25, 2026",
-    time: "03:45 PM - 05:45 PM",
-    start: "2026-03-25T15:45:00",
-    end: "2026-03-25T17:45:00",
+    time: "02:00 PM - 04:00 PM",
+    start: "2026-03-25T14:00:00",
+    end: "2026-03-25T16:00:00",
+    resourcePersons: [
+      { name: "Dr. Dinesh Raj", designation: "IoT and ML Specialist", image: profileImage("Dr.Dinesh Raj.webp"), linkedin: "https://www.linkedin.com/in/dr-dinesh-raj-5aa7676a?utm_source=share_via&utm_content=profile&utm_medium=member_android" }
+    ],
+    description: [
+      "This workshop introduces predictive analytics using Machine Learning within IoT environments where large volumes of sensor data are continuously generated.",
+      "Participants learn how IoT devices in domains such as smart homes, healthcare, agriculture, manufacturing, and smart cities produce data that can be analyzed to forecast future events.",
+      "The session covers IoT architecture, data preprocessing techniques, and basic machine learning model development using tools like Python and Scikit-learn.",
+      "By the end of the workshop, students gain conceptual and practical knowledge to build intelligent, data-driven IoT solutions for real-world applications."
+    ],
+    topics: [
+      "Introduction to IoT architecture and data generation",
+      "Role of Machine Learning in predictive analytics",
+      "Data preprocessing and feature preparation",
+      "Building basic ML models using Python and Scikit-learn",
+      "Predicting events such as equipment failure and energy consumption",
+      "Applications in smart homes, healthcare, agriculture, and smart cities",
+      "Hands-on implementation session"
+    ]
+  },
+  {
+    id: "it-2",
+    dept: "IT",
+    title: "Predictive Analytics for Sustainable and Intelligent Systems",
+    shortDesc: "Data-driven forecasting and decision support for sustainable intelligent systems.",
+    color: "from-green-400 to-emerald-500",
+    date: "March 25, 2026",
+    time: "09:00 AM - 11:00 AM",
+    start: "2026-03-25T09:00:00",
+    end: "2026-03-25T11:00:00",
     resourcePersons: [
       { name: "Ms. Anitha V", designation: "Data Analytics Expert", image: profileImage("Ms.V.Anitha.webp"), linkedin: "https://www.linkedin.com/in/anitha-v-?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" },
       { name: "Ms. Santhi Sankarappan", designation: "Intelligent Systems Expert", image: profileImage("Ms.S.Santhi.webp"), linkedin: "https://www.linkedin.com/in/santhi-sankarappan?utm_source=share_via&utm_content=profile&utm_medium=member_android" }
     ],
     description: [
-      "Introduces predictive analytics for sustainable and intelligent systems across energy, climate, agriculture, and smart infrastructure.",
-      "Includes model design, evaluation, explainability, and ethical AI for data-rich environments."
+      "This workshop introduces predictive analytics for designing sustainable and intelligent systems using data-driven forecasting and decision support techniques.",
+      "Participants explore how predictive models support applications such as energy management, climate forecasting, smart agriculture, and urban infrastructure.",
+      "The session combines conceptual foundations, methodological insights, and real-world case studies to understand predictive modeling in complex data environments.",
+      "It also highlights ethical AI practices including transparency, interpretability, and responsible use of predictive systems in sustainable technologies."
     ],
-    topics: ["Predictive analytics foundations", "Data pipelines and preprocessing", "Forecasting methods", "Sustainability use cases", "Model explainability"]
-  },
-  {
-    id: "it-2",
-    dept: "IT",
-    title: "Predictive Analytics Using Machine Learning in IoT",
-    shortDesc: "Forecast future events using real-time IoT sensor data.",
-    color: "from-blue-500 to-indigo-500",
-    date: "March 25, 2026",
-    time: "09:00 AM - 11:00 AM",
-    start: "2026-03-25T09:00:00",
-    end: "2026-03-25T11:00:00",
-    resourcePersons: [{ name: "Dr. Dinesh Raj", designation: "IoT and ML Specialist", image: profileImage("Dr.Dinesh Raj.webp"), linkedin: "https://www.linkedin.com/in/dr-dinesh-raj-5aa7676a?utm_source=share_via&utm_content=profile&utm_medium=member_android" }],
-    description: [
-      "An introductory and practical workshop on using machine learning for prediction in IoT systems.",
-      "Covers real-time sensor data workflows and applications in smart homes, healthcare, agriculture, and smart cities."
-    ],
-    topics: ["IoT architecture", "Data preprocessing", "ML model basics", "Python and Scikit-learn", "Predictive maintenance and energy forecasting"]
+    topics: [
+      "Foundations of predictive analytics in sustainable systems",
+      "Data pipelines and preprocessing strategies",
+      "Core forecasting and predictive modeling methods",
+      "Predictive analytics for sustainability applications",
+      "Integration with intelligent system architectures",
+      "Model evaluation, validation, and explainability",
+      "Case study: energy load forecasting for smart systems"
+    ]
   },
   {
     id: "ece-1",
@@ -206,10 +228,10 @@ const workshopData = [
     shortDesc: "Massive MIMO, RIS, and beyond for future wireless systems.",
     color: "from-green-400 to-emerald-600",
     date: "March 25, 2026",
-    time: "11:15 AM - 01:15 PM",
-    start: "2026-03-25T11:15:00",
-    end: "2026-03-25T13:15:00",
-    resourcePersons: [{ name: "Dr.V.lingasamy ME,PhD,Msc Yoga", designation: "Open RAN Standardization Engineer", image: profileImage("Mr.Sreeraj.webp"), linkedin: "" }],
+    time: "10:00 AM - 12:30 PM",
+    start: "2026-03-25T10:00:00",
+    end: "2026-03-25T12:30:00",
+    resourcePersons: [{ name: "Dr. V. Lingasamy", designation: "Open RAN Standardization Engineer", image: profileImage("Dr. V. Lingasamy.webp"), linkedin: "" }],
     description: [
       "Covers the evolution of antenna arrays from phased arrays and smart antennas to MIMO and Massive MIMO.",
       "Introduces Reconfigurable Intelligent Surfaces as a key enabler for future 6G networks."
@@ -223,9 +245,9 @@ const workshopData = [
       shortDesc: "High-performance, energy-efficient systems for defense and aerospace applications.",
       color: "from-green-600 to-cyan-600",
       date: "March 25, 2026",
-      time: "03:45 PM - 05:45 PM",
-      start: "2026-03-25T15:45:00",
-      end: "2026-03-25T17:45:00",
+      time: "02:00 PM - 04:00 PM",
+      start: "2026-03-25T14:00:00",
+      end: "2026-03-25T16:00:00",
       resourcePersons: [{ name: "Mr. Raja Subramanian", designation: "Leadership in Semiconductor Innovation and Mission-Critical Deployment, Mistral Solutions (an AXISCADES Technologies Company)", image: profileImage("Mr.Raja Subramanian.webp"), linkedin: "https://www.linkedin.com/in/raja-subramanian-1390479?utm_source=share_via&utm_content=profile&utm_medium=member_android" }],
       description: [
         "The semiconductor industry is undergoing transformative advancements that are significantly influencing next-generation defense and aerospace technologies. Modern semiconductor shifts focus on delivering high-performance, energy-efficient, and highly reliable systems capable of operating under extreme environmental conditions such as radiation exposure and temperature variations. Advanced fabrication techniques, innovative packaging methods, and secure chip architectures are enabling compact, durable, and mission-critical electronic systems for applications including radar, avionics, satellite communication, and autonomous defense platforms.",
@@ -242,9 +264,9 @@ const workshopData = [
     shortDesc: "Quantum foundations, technologies, and practical applications.",
     color: "from-purple-500 to-indigo-500",
     date: "March 25, 2026",
-    time: "03:45 PM - 05:45 PM",
-    start: "2026-03-25T15:45:00",
-    end: "2026-03-25T17:45:00",
+    time: "02:00 PM - 05:15 PM",
+    start: "2026-03-25T14:00:00",
+    end: "2026-03-25T17:15:00",
     resourcePersons: [{ name: "Dr. Krishnamoorthy Dinesh", designation: "Assistant Professor, IIT Palakkad", image: profileImage("Dr.Krishnamoorthy Dinesh.webp"), linkedin: "https://www.linkedin.com/in/dinesh-krishnamoorthy-21bb641b?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" }],
     description: [
       "Structured introduction to quantum computing from bits to qubits, quantum gates, and modern frameworks.",
@@ -259,9 +281,9 @@ const workshopData = [
     shortDesc: "Automated analysis of large-scale satellite and remote sensing data.",
     color: "from-purple-400 to-fuchsia-500",
     date: "March 25, 2026",
-    time: "09:00 AM - 11:00 AM",
-    start: "2026-03-25T09:00:00",
-    end: "2026-03-25T11:00:00",
+    time: "02:00 PM - 04:00 PM",
+    start: "2026-03-25T14:00:00",
+    end: "2026-03-25T16:00:00",
     resourcePersons: [{ name: "Dr. Kandasamy S", designation: "Geospatial AI Expert", image: profileImage("Mr.Vignesh Kandasamy.webp"), linkedin: "https://www.linkedin.com/in/kandasamy-s-98149057?utm_source=share_via&utm_content=profile&utm_medium=member_android" }],
     description: [
       "Shows how AI transforms Earth Observation with faster and more accurate analysis of geospatial data.",
@@ -276,9 +298,9 @@ const workshopData = [
     shortDesc: "Hands-on AR development from tracking to Android deployment.",
     color: "from-purple-600 to-violet-600",
     date: "March 25, 2026",
-    time: "11:15 AM - 01:15 PM",
-    start: "2026-03-25T11:15:00",
-    end: "2026-03-25T13:15:00",
+    time: "11:00 AM - 01:00 PM",
+    start: "2026-03-25T11:00:00",
+    end: "2026-03-25T13:00:00",
     resourcePersons: [{ name: "Mr. Karthikeyan", designation: "AR/XR Developer", image: profileImage("Mr.J.Karthikeyan.webp"), linkedin: "https://www.linkedin.com/in/karthikeyanmecse?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" }],
     description: [
       "Beginner-friendly AR workshop covering core concepts and practical Unity + Vuforia integration.",
@@ -293,9 +315,9 @@ const workshopData = [
     shortDesc: "Explore real-world challenges of deploying AI agents in SaaS systems.",
     color: "from-pink-600 to-purple-600",
     date: "March 25, 2026",
-    time: "01:30 PM - 03:30 PM",
-    start: "2026-03-25T13:30:00",
-    end: "2026-03-25T15:30:00",
+    time: "02:00 PM - 04:00 PM",
+    start: "2026-03-25T14:00:00",
+    end: "2026-03-25T16:00:00",
     resourcePersons: [{ name: "Mr.S.Ajithkumar", designation: "Module lead  - Embedded Software. Mistral solutions private limited, Bengaluru Mistral Solutions Pvt. Ltd", image: profileImage("Mr.S.Ajithkumar.webp"), linkedin: "https://www.linkedin.com/in/ajith-kumar-s-100033179?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" }],
     description: [
     "Explores the real-world challenges of integrating AI agents into SaaS platforms beyond demos and hype.",
@@ -316,9 +338,9 @@ const workshopData = [
     shortDesc: "Design and test IoT systems virtually before real-world deployment.",
     color: "from-pink-500 to-rose-500",
     date: "March 25, 2026",
-    time: "03:45 PM - 05:45 PM",
-    start: "2026-03-25T15:45:00",
-    end: "2026-03-25T17:45:00",
+    time: "10:00 AM - 12:00 PM",
+    start: "2026-03-25T10:00:00",
+    end: "2026-03-25T12:00:00",
     resourcePersons: [{ name: "Dr. Naskath Jahangeer", designation: "IoT Simulation Specialist", image: profileImage("Dr.J.Naskath.webp"), linkedin: "https://www.linkedin.com/in/naskath-jahangeer-31a3b6280?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" }],
     description: [
     "Introduces the design and testing of IoT systems using intelligent simulation tools before real-world deployment.",
@@ -340,9 +362,9 @@ const workshopData = [
     shortDesc: "Mathematics as the structural backbone of modern AI.",
     color: "from-pink-500 to-rose-400",
     date: "March 25, 2026",
-    time: "09:00 AM - 11:00 AM",
-    start: "2026-03-25T09:00:00",
-    end: "2026-03-25T11:00:00",
+    time: "10:00 AM - 12:00 PM",
+    start: "2026-03-25T10:00:00",
+    end: "2026-03-25T12:00:00",
     resourcePersons: [{ name: "Dr. Panchatcharam Mariappan", designation: "Mathematics and AI Foundations", image: profileImage("Mr.Panchatcharam Mariappan.webp"), linkedin: "https://www.linkedin.com/in/panchatcharam-mariappan-a2846587" }],
     description: [
       "This session explains the foundational role of mathematics in AI: linear algebra, probability, statistics, and calculus.",
@@ -357,9 +379,9 @@ const workshopData = [
     shortDesc: "AI-powered placements, resumes, projects, and interview preparation.",
     color: "from-pink-400 to-fuchsia-400",
     date: "March 25, 2026",
-    time: "11:15 AM - 01:15 PM",
-    start: "2026-03-25T11:15:00",
-    end: "2026-03-25T13:15:00",
+    time: "02:00 PM - 04:00 PM",
+    start: "2026-03-25T14:00:00",
+    end: "2026-03-25T16:00:00",
     resourcePersons: [{ name: "Mr. Murali", designation: "Career Coach and Placement Mentor", image: profileImage("Mr.Murali Dharan Rajasekar.webp"), linkedin: "https://www.linkedin.com/in/connectmurali?utm_source=share_via&utm_content=profile&utm_medium=member_android" }],
     description: [
       "Hands-on session on using AI for placement preparation, resume optimization, and interview readiness.",
@@ -554,34 +576,46 @@ const detailedWorkshopOverrides = {
     ]
   },
   "it-1": {
+    title: "Predictive Analytics Using Machine Learning in IoT",
+    resourcePersons: [
+      { name: "Dr. Dinesh Raj", designation: "IoT and ML Specialist", image: profileImage("Dr.Dinesh Raj.webp"), linkedin: "https://www.linkedin.com/in/dr-dinesh-raj-5aa7676a?utm_source=share_via&utm_content=profile&utm_medium=member_android" }
+    ],
+    description: [
+      "This workshop introduces predictive analytics using Machine Learning within IoT environments where large volumes of sensor data are continuously generated.",
+      "Participants learn how IoT devices in domains such as smart homes, healthcare, agriculture, manufacturing, and smart cities produce data that can be analyzed to forecast future events.",
+      "The session covers IoT architecture, data preprocessing techniques, and basic machine learning model development using tools like Python and Scikit-learn.",
+      "By the end of the workshop, students gain conceptual and practical knowledge to build intelligent, data-driven IoT solutions for real-world applications."
+    ],
+    topics: [
+      "Introduction to IoT architecture and data generation",
+      "Role of Machine Learning in predictive analytics",
+      "Data preprocessing and feature preparation",
+      "Building basic ML models using Python and Scikit-learn",
+      "Predicting events such as equipment failure and energy consumption",
+      "Applications in smart homes, healthcare, agriculture, and smart cities",
+      "Hands-on implementation session"
+    ]
+  },
+  "it-2": {
     title: "Predictive Analytics for Sustainable and Intelligent Systems",
     resourcePersons: [
       { name: "Ms. Anitha V", designation: "Data Analytics Expert", image: profileImage("Ms.V.Anitha.webp"), linkedin: "https://www.linkedin.com/in/anitha-v-?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" },
       { name: "Ms. Santhi Sankarappan", designation: "Intelligent Systems Expert", image: profileImage("Ms.S.Santhi.webp"), linkedin: "https://www.linkedin.com/in/santhi-sankarappan?utm_source=share_via&utm_content=profile&utm_medium=member_android" }
     ],
     description: [
-      "This workshop introduces predictive analytics practices for sustainable and intelligent systems in energy, climate, agriculture, and urban infrastructure.",
-      "It combines conceptual foundations, modeling methods, case studies, and explainable AI principles for data-rich decision systems.",
-      "Participants learn how to design, evaluate, and interpret forecasting models for real engineering applications."
+      "This workshop introduces predictive analytics for designing sustainable and intelligent systems using data-driven forecasting and decision support techniques.",
+      "Participants explore how predictive models support applications such as energy management, climate forecasting, smart agriculture, and urban infrastructure.",
+      "The session combines conceptual foundations, methodological insights, and real-world case studies to understand predictive modeling in complex data environments.",
+      "It also highlights ethical AI practices including transparency, interpretability, and responsible use of predictive systems in sustainable technologies."
     ],
     topics: [
       "Foundations of predictive analytics in sustainable systems",
       "Data pipelines and preprocessing strategies",
-      "Forecasting and predictive modeling methods",
-      "Sustainability applications and intelligent system integration",
+      "Core forecasting and predictive modeling methods",
+      "Predictive analytics for sustainability applications",
+      "Integration with intelligent system architectures",
       "Model evaluation, validation, and explainability",
-      "Case study: energy load forecasting",
-      "Hands-on session"
-    ]
-  },
-  "it-2": {
-    resourcePersons: [
-      { name: "Dr. Dinesh Raj", designation: "IoT and ML Specialist", image: profileImage("Dr.Dinesh Raj.webp"), linkedin: "https://www.linkedin.com/in/dr-dinesh-raj-5aa7676a?utm_source=share_via&utm_content=profile&utm_medium=member_android" }
-    ],
-    description: [
-      "Predictive Analytics Using ML in IoT introduces how intelligent systems forecast events from real-time sensor data.",
-      "Participants learn foundational IoT architecture, data preprocessing, and ML model basics using Python and Scikit-learn.",
-      "Applications include predictive maintenance, energy consumption, health risk analysis, and traffic forecasting."
+      "Case study: energy load forecasting for smart systems"
     ]
   },
   "cse-1": {
@@ -660,7 +694,7 @@ const detailedWorkshopOverrides = {
   "ece-1": {
     title: "From Arrays to Intelligence: Evolving Antenna Technologies - Massive MIMO, RIS, and Beyond",
     resourcePersons: [
-      { name: "Dr. V. Lingasamy", designation: "ME, PhD, MSc Yoga", image: profileImage("Dr.V.Lingasamy.webp"), linkedin: "" }
+      { name: "Dr. V. Lingasamy", designation: "ME, PhD, MSc Yoga", image: profileImage("Dr.V. Lingasamy.webp"), linkedin: "" }
     ],
     description: [
       "Antenna arrays are groups of antennas working together to improve wireless communication. Instead of radiating energy in all directions like a single antenna, arrays use wave interference to focus signals where they are needed. This enables beam steering, higher signal strength, reduced interference, and higher data rates, which are essential for today's mobile networks.",
@@ -780,8 +814,10 @@ const formattedWorkshops = workshopData.map(track => ({
         title: newEvent.title || newEvent.name || "Event"
       });
       setAlertType('success');
-      setAlertMsg(`Registered: ${newEvent.title || newEvent.name}`);
-      setTimeout(() => setAlertMsg(''), 2500);
+setAlertMsg(` ${newEvent.title || newEvent.name} added to cart.
+Proceed to payment to complete your registration.`);
+      
+setTimeout(() => setAlertMsg(''), 2500);
     }
   };
 
@@ -946,7 +982,7 @@ const formattedWorkshops = workshopData.map(track => ({
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 1.8, ease: [0.34, 1.56, 0.64, 1] }}
             >
-              CONFERENCE TRACKS
+              PRE-CONFERENCE TRACKS
             </motion.div>
           </div>
 
