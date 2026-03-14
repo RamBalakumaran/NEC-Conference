@@ -537,11 +537,11 @@ const detailedTrackOverrides = {
     title: "Quantum Computing: From Qubits to Contemporary Applications (Virtual session)",
     resourcePersons: [{ name: "Dr. Krishnamoorthy Dinesh", designation: "Assistant Professor, IIT Palakkad", image: profileImage("Dr.Krishnamoorthy Dinesh.webp"), linkedin: "https://www.linkedin.com/in/dinesh-krishnamoorthy-21bb641b?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" }]
   },
-  "cse-2": {
+  "cse-3": {
     title: "AI in Earth Observation (EO): Deep Learning and Geospatial Intelligence",
     resourcePersons: [{ name: "Dr. Kandasamy S", designation: "Geospatial AI Expert", image: profileImage("Mr.Vignesh Kandasamy.webp"), linkedin: "https://www.linkedin.com/in/kandasamy-s-98149057?utm_source=share_via&utm_content=profile&utm_medium=member_android" }]
   },
-  "cse-3": {
+  "cse-2": {
     title: "AR Unlocked: Creating Immersive Experiences with Vuforia & Unity",
     resourcePersons: [{ name: "Mr. Karthikeyan", designation: "AR/XR Developer", image: profileImage("Mr.J.Karthikeyan.webp"), linkedin: "https://www.linkedin.com/in/karthikeyanmecse?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" }]
   },

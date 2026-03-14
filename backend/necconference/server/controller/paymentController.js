@@ -1,4 +1,3 @@
-
 const { paymentModel } = require('../model/paymentModel');
 const User = require('../model/User');
 const Registration = require('../model/Registration');
@@ -20,10 +19,10 @@ const parseEvents = (value) => {
       const parsed = JSON.parse(value);
       return Array.isArray(parsed) ? parsed : [];
     } catch {
-      return [];
+      return[];
     }
   }
-  return [];
+  return[];
 };
 
 const normalizeEvents = (events) =>
@@ -51,7 +50,7 @@ const syncRegistrationFromPayment = async ({
   });
 
   if (reg) {
-    const existingEvents = Array.isArray(reg.selectedEvents) ? reg.selectedEvents : [];
+    const existingEvents = Array.isArray(reg.selectedEvents) ? reg.selectedEvents :[];
     const mergedEvents = Array.from(new Set([...existingEvents, ...selectedEvents]));
     const paymentJson = reg.payment || {};
     await reg.update({
@@ -64,7 +63,7 @@ const syncRegistrationFromPayment = async ({
         transactionId: transactionId || paymentJson.transactionId || null,
         date: now
       },
-      activityLog: [
+      activityLog:[
         ...(reg.activityLog || []),
         {
           action: canonicalStatus === 'Paid' ? 'Payment Paid' : canonicalStatus === 'Failed' ? 'Payment Failed' : 'Payment Pending',
@@ -87,7 +86,7 @@ const syncRegistrationFromPayment = async ({
       transactionId: transactionId || null,
       date: now
     },
-    activityLog: [
+    activityLog:[
       {
         action: canonicalStatus === 'Paid' ? 'Payment Paid' : canonicalStatus === 'Failed' ? 'Payment Failed' : 'Payment Pending',
         timestamp: now
@@ -110,7 +109,7 @@ const getUserPayments = (req, res) => {
 
   paymentModel.getPaymentsByUserId(userId, (err, payments) => {
     if (err) return handleError(res, err);
-    const mapped = (payments || []).map((p) => ({ ...p, status: toCanonicalStatus(p.status) }));
+    const mapped = (payments ||[]).map((p) => ({ ...p, status: toCanonicalStatus(p.status) }));
     res.json({ payments: mapped });
   });
 };
@@ -119,7 +118,7 @@ const getUserPayments = (req, res) => {
 const getAllPayments = (req, res) => {
   paymentModel.getAllPayments((err, payments) => {
     if (err) return handleError(res, err);
-    const mapped = (payments || []).map((p) => ({ ...p, status: toCanonicalStatus(p.status) }));
+    const mapped = (payments ||[]).map((p) => ({ ...p, status: toCanonicalStatus(p.status) }));
     res.json({ payments: mapped });
   });
 };
@@ -135,7 +134,7 @@ const getStatus = (req, res) => {
     res.json({
       orderId,
       status: toCanonicalStatus(payment.status),
-      amount: payment.amount, // now in rupees
+      amount: payment.amount, 
       currency: payment.currency,
       events: payment.events
     });
@@ -145,12 +144,14 @@ const getStatus = (req, res) => {
 // POST /payment/create-order
 const createOrder = async (req, res) => {
   try {
-      const { userId, amount: bodyAmount, events, upiId } = req.body;
-      if (!userId) return res.status(400).json({ error: 'userId required' });
+    const { userId, amount: bodyAmount, events, upiId } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId required' });
 
-      // check for existing pending order for this user
-      paymentModel.getPendingPayment(userId, async (err, pending) => {
-        if (err) return handleError(res, err);
+    paymentModel.getPendingPayment(userId, async (err, pending) => {
+      if (err) return handleError(res, err);
+
+      // --- CRITICAL FIX: The try/catch block below prevents the 524 Timeout Error ---
+      try {
         if (pending) {
           await syncRegistrationFromPayment({
             userEmail: userId,
@@ -159,7 +160,6 @@ const createOrder = async (req, res) => {
             status: 'Pending',
             transactionId: pending.transactionId || pending.razorpayPaymentId || null
           });
-          // return existing pending order (amount in paise from razorpay)
           return res.json({
             keyId: process.env.RAZORPAY_KEY_ID,
             orderId: pending.razorpayOrderId,
@@ -168,56 +168,81 @@ const createOrder = async (req, res) => {
           });
         }
 
-        // determine rupee amount (allowlisted for server-side enforcement)
-        const ALLOWED_AMOUNTS = [300, 500, 1500];
-        const hasBodyAmount = bodyAmount !== undefined && bodyAmount !== null && bodyAmount !== '';
-        let rupees = hasBodyAmount ? parseFloat(bodyAmount) : 10;
+        // Validate exact amounts based on Pricing Cards (300, 500, 1500)
+        const ALLOWED_AMOUNTS =[300, 500, 1500];
+        
+        if (bodyAmount === undefined || bodyAmount === null || bodyAmount === '') {
+          return res.status(400).json({ error: 'Amount is required.' });
+        }
+        
+        let rupees = parseFloat(bodyAmount);
+        
         if (!Number.isFinite(rupees) || rupees <= 0) {
-          return res.status(400).json({ error: 'Invalid amount' });
+          return res.status(400).json({ error: 'Invalid amount.' });
         }
         if (!ALLOWED_AMOUNTS.includes(rupees)) {
-          return res.status(400).json({ error: 'Amount must be one of 300, 500, or 1500' });
+          return res.status(400).json({ error: 'Amount must be exactly 300, 500, or 1500 based on the selected pass.' });
         }
+
         const paise = Math.round(rupees * 100);
         const currency = 'INR';
-
         const receipt = `order_${userId}_${Date.now()}`;
-        // attach upiId to the notes so it travels with the razorpay order and is easy to lookup later
+        
         const notes = { userId };
         if (upiId) notes.upiId = upiId;
 
+        // Call Razorpay
         const result = await razorpayCreateOrder({ amount: paise, currency, receipt, notes });
-        const order = result.order; // extract order object returned by razorpay service
-      await new Promise((resolve, reject) => {
-        paymentModel.createPayment(
-          {
-            userId,
-            events,
-            amount: rupees, // store rupee amount in our table
-            currency,
-            razorpayOrderId: order.id,
-            status: 'Pending'
-          },
-          (createErr) => {
-            if (createErr) return reject(createErr);
-            return resolve();
-          }
-        );
-      });
+        
+        // Fix: Properly handle if Razorpay service fails
+        if (!result.success || !result.order) {
+           throw new Error(result.error || "Failed to create order with Razorpay");
+        }
+        
+        const order = result.order; 
 
-      await syncRegistrationFromPayment({
-        userEmail: userId,
-        events,
-        amount: rupees,
-        status: 'Pending',
-        transactionId: null
-      });
+        // Save to Database
+        await new Promise((resolve, reject) => {
+          paymentModel.createPayment(
+            {
+              userId,
+              events,
+              amount: rupees,
+              currency,
+              razorpayOrderId: order.id,
+              status: 'Pending'
+            },
+            (createErr) => {
+              if (createErr) return reject(createErr);
+              return resolve();
+            }
+          );
+        });
 
-      // order.amount is paise (what razorpay returns)
-      return res.json({ keyId: process.env.RAZORPAY_KEY_ID, orderId: order.id, amount: order.amount, currency: order.currency });
+        await syncRegistrationFromPayment({
+          userEmail: userId,
+          events,
+          amount: rupees,
+          status: 'Pending',
+          transactionId: null
+        });
+
+        // Send order back to frontend successfully
+        return res.json({ 
+          keyId: process.env.RAZORPAY_KEY_ID, 
+          orderId: order.id, 
+          amount: order.amount, 
+          currency: order.currency 
+        });
+
+      } catch (asyncErr) {
+        console.error('Error during Razorpay API call or DB save:', asyncErr);
+        // This stops the server from hanging and returns a fast 500 error instead of a 100-second 524 Timeout
+        return handleError(res, asyncErr); 
+      }
     });
   } catch (e) {
-    console.error('Error in createOrder:', e);
+    console.error('Error in createOrder outer block:', e);
     handleError(res, e);
   }
 };
@@ -226,11 +251,8 @@ const createOrder = async (req, res) => {
 const verify = (req, res) => {
   const { razorpayOrderId, razorpayPaymentId, razorpaySignature, upiId } = req.body;
 
-  // optionally record the provided UPI ID; our simple payments table doesn't have a column yet,
-  // but we can log it for audit or future use. If you later alter the table you could store it there.
   if (upiId) {
     console.log(`Payment verify called with upiId=${upiId}`);
-    // could update paymentModel to keep this info if needed
   }
 
   const check = verifyPaymentSignature({ razorpayOrderId, razorpayPaymentId, razorpaySignature });
@@ -245,69 +267,74 @@ const verify = (req, res) => {
     razorpayPaymentId,
     razorpayPaymentId,
     (err) => {
-    if (err) {
-      console.error('Error updating status after verification:', err);
-      return handleError(res, err);
-    }
-    paymentModel.getPaymentByOrderId(razorpayOrderId, async (fetchErr, paymentRow) => {
-      if (!fetchErr && paymentRow) {
-        try {
-          await syncRegistrationFromPayment({
-            userEmail: paymentRow.userId,
-            events: paymentRow.events,
-            amount: paymentRow.amount,
-            status: 'Paid',
-            transactionId: razorpayPaymentId
-          });
-
-          const userEmail = paymentRow.userId; // in this app, userId is email
-          const user = await User.findOne({ where: { email: userEmail } });
-          const reg = await Registration.findOne({
-            where: { contactEmail: userEmail },
-            order: [['updatedAt', 'DESC']]
-          });
-          const registeredEvents = normalizeEvents(paymentRow.events);
-          const effectiveEvents = registeredEvents.length
-            ? registeredEvents
-            : (Array.isArray(reg?.selectedEvents) ? reg.selectedEvents : []);
-
-          await sendEventBookConfirmationEmail(
-            {
-              name: user?.name || reg?.contactName || 'Participant',
-              email: userEmail,
-              participantId: user?.participantId || user?.id || '-',
-              events: effectiveEvents
-            },
-            razorpayPaymentId,
-            paymentRow.amount,
-            {
-              participantId: user?.participantId || user?.id || '-',
-              name: user?.name || reg?.contactName || 'Participant',
-              email: userEmail,
-              paymentStatus: 'Paid',
-              paymentDate: new Date(),
-              events: effectiveEvents,
-              orderId: razorpayOrderId,
-              paymentId: razorpayPaymentId,
-              upiId: upiId || null,
-              currency: paymentRow.currency || 'INR'
-            }
-          );
-        } catch (syncErr) {
-          console.warn('Registration/email sync warning on verify:', syncErr?.message || syncErr);
-        }
+      if (err) {
+        console.error('Error updating status after verification:', err);
+        return handleError(res, err);
       }
 
-      res.json({
-        verified: true,
-        orderId: razorpayOrderId,
-        paymentId: razorpayPaymentId,
-        transactionId: razorpayPaymentId,
-        status: 'Paid',
-        upiId: upiId || null
+      paymentModel.getPaymentByOrderId(razorpayOrderId, async (fetchErr, paymentRow) => {
+        try {
+          if (!fetchErr && paymentRow) {
+            await syncRegistrationFromPayment({
+              userEmail: paymentRow.userId,
+              events: paymentRow.events,
+              amount: paymentRow.amount,
+              status: 'Paid',
+              transactionId: razorpayPaymentId
+            });
+
+            const userEmail = paymentRow.userId; 
+            const user = await User.findOne({ where: { email: userEmail } });
+            const reg = await Registration.findOne({
+              where: { contactEmail: userEmail },
+              order: [['updatedAt', 'DESC']]
+            });
+            
+            const registeredEvents = normalizeEvents(paymentRow.events);
+            const effectiveEvents = registeredEvents.length
+              ? registeredEvents
+              : (Array.isArray(reg?.selectedEvents) ? reg.selectedEvents :[]);
+
+            sendEventBookConfirmationEmail(
+              {
+                name: user?.name || reg?.contactName || 'Participant',
+                email: userEmail,
+                participantId: user?.participantId || user?.id || '-',
+                events: effectiveEvents
+              },
+              razorpayPaymentId,
+              paymentRow.amount,
+              {
+                participantId: user?.participantId || user?.id || '-',
+                name: user?.name || reg?.contactName || 'Participant',
+                email: userEmail,
+                paymentStatus: 'Paid',
+                paymentDate: new Date(),
+                events: effectiveEvents,
+                orderId: razorpayOrderId,
+                paymentId: razorpayPaymentId,
+                upiId: upiId || null,
+                currency: paymentRow.currency || 'INR'
+              }
+            ).catch((mailErr) => {
+              console.warn('Event confirmation email warning (async):', mailErr?.message || mailErr);
+            });
+          }
+        } catch (syncErr) {
+          console.warn('Registration/email sync warning on verify:', syncErr?.message || syncErr);
+        } finally {
+          // Send response instantly, don't wait for background tasks
+          res.json({
+            verified: true,
+            orderId: razorpayOrderId,
+            paymentId: razorpayPaymentId,
+            transactionId: razorpayPaymentId,
+            status: 'Paid',
+            upiId: upiId || null
+          });
+        }
       });
-    });
-  }
+    }
   );
 };
 
@@ -315,27 +342,29 @@ const verify = (req, res) => {
 const failure = (req, res) => {
   const { razorpayOrderId, razorpayPaymentId, error } = req.body;
   if (!razorpayOrderId) return res.status(400).json({ success: false, error: 'razorpayOrderId required' });
+  
   paymentModel.updatePaymentStatusIfCurrent(razorpayOrderId, 'Failed', 'Pending', razorpayPaymentId || null, null, (err, result) => {
     if (err) console.error('Error marking payment failed:', err);
-    // Send failed payment mail when a row was updated
+    
     if ((result?.affectedRows || 0) > 0) {
       paymentModel.getPaymentByOrderId(razorpayOrderId, async (fetchErr, paymentRow) => {
         if (fetchErr || !paymentRow) return;
-        const userEmail = paymentRow.userId; // in this app, userId is email for payments
         try {
+          const userEmail = paymentRow.userId; 
           const user = await User.findOne({ where: { email: userEmail } });
           const reg = await Registration.findOne({
             where: { contactEmail: userEmail },
             order: [['updatedAt', 'DESC']]
           });
           const normalizedPaymentEvents = normalizeEvents(paymentRow.events);
+          
           if (reg) {
             const paymentJson = reg.payment || {};
             await reg.update({
               status: 'Failed',
               selectedEvents: normalizedPaymentEvents.length
                 ? Array.from(new Set([...(Array.isArray(reg.selectedEvents) ? reg.selectedEvents : []), ...normalizedPaymentEvents]))
-                : (Array.isArray(reg.selectedEvents) ? reg.selectedEvents : []),
+                : (Array.isArray(reg.selectedEvents) ? reg.selectedEvents :[]),
               payment: {
                 ...paymentJson,
                 paymentStatus: 'Failed',
@@ -343,7 +372,7 @@ const failure = (req, res) => {
                 amount: paymentRow.amount || paymentJson.amount || 0,
                 date: new Date()
               },
-              activityLog: [
+              activityLog:[
                 ...(reg.activityLog || []),
                 { action: 'Payment Failed', timestamp: new Date() }
               ]
@@ -385,4 +414,3 @@ module.exports = {
   verify,
   failure
 };
-

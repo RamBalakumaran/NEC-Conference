@@ -61,14 +61,14 @@ exports.saveCartState = async (req, res) => {
     }
 
     const userId = userData._id || userData.id || null;
-    const base = [];
+    const base =[];
     if (userId) {
       base.push({ userId });
     } else {
       base.push({ contactEmail: userData.email });
     }
+    
     // use sequelize.json helper to avoid bad escaping of the dollar sign
-    // earlier we saw MySQL error with '$$.paymentStatus' path
     base.push(
       sequelize.where(
         sequelize.json('payment.paymentStatus'),
@@ -76,26 +76,11 @@ exports.saveCartState = async (req, res) => {
       )
     );
 
-    // perform read+write inside a transaction to avoid race conditions
     let registration = null;
-    await sequelize.transaction(async (t) => {
-      registration = await Registration.findOne({
-        where: {
-          [Op.and]: base,
-        },
-        order: [["updatedAt", "DESC"]],
-        transaction: t,
-        lock: t.LOCK.UPDATE
-      });
+    let isStale = false; // Track this to handle responses outside the transaction
 
+    // Define values OUTSIDE the transaction so the email logic at the bottom can read it
     const incomingCartUpdatedAt = Number(cartUpdatedAt || Date.now());
-    const existingCartUpdatedAt = Number(registration?.payment?.cartUpdatedAt || 0);
-
-    // Ignore stale/out-of-order cart writes (common when two add/remove requests race).
-    if (registration && existingCartUpdatedAt > 0 && incomingCartUpdatedAt < existingCartUpdatedAt) {
-      return res.status(200).json({ message: "Stale cart update ignored", pendingEmailSent: false, staleIgnored: true });
-    }
-
     const values = {
       userId: userId || null,
       contactEmail: userData.email,
@@ -103,6 +88,24 @@ exports.saveCartState = async (req, res) => {
       payment: { amount, paymentStatus: "Pending", cartUpdatedAt: incomingCartUpdatedAt },
       registeredOn: new Date(),
     };
+
+    // perform read+write inside a transaction to avoid race conditions
+    await sequelize.transaction(async (t) => {
+      registration = await Registration.findOne({
+        where: {[Op.and]: base,
+        },
+        order: [["updatedAt", "DESC"]],
+        transaction: t,
+        lock: t.LOCK.UPDATE
+      });
+
+      const existingCartUpdatedAt = Number(registration?.payment?.cartUpdatedAt || 0);
+
+      // Ignore stale/out-of-order cart writes
+      if (registration && existingCartUpdatedAt > 0 && incomingCartUpdatedAt < existingCartUpdatedAt) {
+        isStale = true;
+        return; // Exits the transaction callback early, NO res.json() here!
+      }
 
       if (registration) {
         await registration.update(values, { transaction: t });
@@ -116,8 +119,8 @@ exports.saveCartState = async (req, res) => {
           transaction: t,
           lock: t.LOCK.UPDATE
         });
+        
         if (existing) {
-          // update the existing record
           registration = existing;
           await registration.update(values, { transaction: t });
         } else {
@@ -126,7 +129,14 @@ exports.saveCartState = async (req, res) => {
       }
     });
 
-    // Send "registered but payment pending" mail only when explicitly requested
+    // --- RESPONSES HANDLED SAFELY OUTSIDE THE TRANSACTION ---
+
+    // 1. Check if the cart was stale and return early
+    if (isStale) {
+      return res.status(200).json({ message: "Stale cart update ignored", pendingEmailSent: false, staleIgnored: true });
+    }
+
+    // 2. Send "registered but payment pending" mail only when explicitly requested
     if (sendPendingEmail === true && Array.isArray(values.selectedEvents) && values.selectedEvents.length > 0) {
       let participantId = userData?.participantId || "-";
       try {
@@ -157,13 +167,17 @@ exports.saveCartState = async (req, res) => {
       pendingEmailSent = !!sent;
     }
 
-    res.status(200).json({ message: "Cart saved", pendingEmailSent });
+    // 3. Send final success response
+    return res.status(200).json({ message: "Cart saved", pendingEmailSent });
+
   } catch (e) {
     console.error("Save Cart Error:", e);
-    res.status(500).json({ error: e.message });
+    // Double check that headers weren't sent to prevent crashes
+    if (!res.headersSent) {
+      return res.status(500).json({ error: e.message });
+    }
   }
 };
-
 // 4. Validate User
 exports.validateUser = (req, res) => {
   res.status(200).json({ message: "User is valid" });
