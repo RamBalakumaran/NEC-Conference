@@ -22,14 +22,24 @@ const { paymentModel } = require('./model/paymentModel');
 
 const { startPaymentScheduler } = require('./service/paymentScheduler');
 const { initializeParticipantIds } = require('./service/participantIdService');
+const { initializeAccountStatuses } = require('./service/accountStatusService');
 
 dotenv.config();
 
 // begin database connection and continue setup once ready
-connectDB().then(() => {
-  initializeParticipantIds().catch((err) => {
+connectDB().then(async () => {
+  try {
+    await initializeAccountStatuses();
+  } catch (err) {
+    console.error("Account status initialization failed:", err.message);
+  }
+
+  try {
+    await initializeParticipantIds();
+  } catch (err) {
     console.error("Participant ID initialization failed:", err.message);
-  });
+  }
+
   migratePaymentTables(() => {
     // create new simplified payments table
     paymentModel.initializeTable();
@@ -87,5 +97,4 @@ app.use((err, req, res, next) => {
   console.error('Unhandled error:', err && err.stack ? err.stack : err);
   res.status(err?.status || 500).json({ error: err?.message || 'Internal server error' });
 });
-
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -17,7 +17,7 @@ const parseEvents = (value) => {
   if (typeof value === 'string') {
     try {
       const parsed = JSON.parse(value);
-      return Array.isArray(parsed) ? parsed : [];
+      return Array.isArray(parsed) ? parsed :[];
     } catch {
       return[];
     }
@@ -98,7 +98,7 @@ const syncRegistrationFromPayment = async ({
 
 // helper to respond with standardized error
 const handleError = (res, err) => {
-  console.error(err);
+  console.error("Payment API Error: ", err);
   return res.status(500).json({ error: err.message || 'Server error' });
 };
 
@@ -150,7 +150,6 @@ const createOrder = async (req, res) => {
     paymentModel.getPendingPayment(userId, async (err, pending) => {
       if (err) return handleError(res, err);
 
-      // --- CRITICAL FIX: The try/catch block below prevents the 524 Timeout Error ---
       try {
         if (pending) {
           await syncRegistrationFromPayment({
@@ -168,7 +167,6 @@ const createOrder = async (req, res) => {
           });
         }
 
-        // Validate exact amounts based on Pricing Cards (300, 500, 1500)
         const ALLOWED_AMOUNTS =[300, 500, 1500];
         
         if (bodyAmount === undefined || bodyAmount === null || bodyAmount === '') {
@@ -186,17 +184,21 @@ const createOrder = async (req, res) => {
 
         const paise = Math.round(rupees * 100);
         const currency = 'INR';
-        const receipt = `order_${userId}_${Date.now()}`;
         
-        const notes = { userId };
+        // --- CRITICAL FIX ---
+        // Generates a receipt ID that is guaranteed to be under 40 characters
+        // Example output: "rcpt_10500000_1234" (~18 characters max)
+        const shortReceipt = `rcpt_${Date.now().toString().slice(-8)}_${Math.floor(Math.random() * 10000)}`;
+        
+        const notes = { userId: String(userId).substring(0, 40) }; // notes values also have limits in Razorpay
         if (upiId) notes.upiId = upiId;
 
         // Call Razorpay
-        const result = await razorpayCreateOrder({ amount: paise, currency, receipt, notes });
+        const result = await razorpayCreateOrder({ amount: paise, currency, receipt: shortReceipt, notes });
         
-        // Fix: Properly handle if Razorpay service fails
-        if (!result.success || !result.order) {
-           throw new Error(result.error || "Failed to create order with Razorpay");
+        if (!result || !result.success || !result.order) {
+           console.error("Razorpay API Failed:", result?.error);
+           throw new Error(result?.error || "Failed to connect to Razorpay. Check API Keys.");
         }
         
         const order = result.order; 
@@ -237,7 +239,6 @@ const createOrder = async (req, res) => {
 
       } catch (asyncErr) {
         console.error('Error during Razorpay API call or DB save:', asyncErr);
-        // This stops the server from hanging and returns a fast 500 error instead of a 100-second 524 Timeout
         return handleError(res, asyncErr); 
       }
     });
@@ -323,7 +324,6 @@ const verify = (req, res) => {
         } catch (syncErr) {
           console.warn('Registration/email sync warning on verify:', syncErr?.message || syncErr);
         } finally {
-          // Send response instantly, don't wait for background tasks
           res.json({
             verified: true,
             orderId: razorpayOrderId,

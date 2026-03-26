@@ -7,10 +7,14 @@ jest.mock('../model', () => ({ sequelize: {} }));
 
 const adminController = require('../controller/adminController');
 const Registration = require('../model/Registration');
+const User = require('../model/User');
 
 jest.mock('../model/Registration', () => {
   return jest.fn().mockImplementation(() => ({}));
 });
+jest.mock('../model/User', () => ({
+  findOne: jest.fn()
+}));
 
 // We'll override static methods we need later by attaching to Registration
 Registration.findByPk = jest.fn();
@@ -18,6 +22,7 @@ Registration.findByPk = jest.fn();
 const app = express();
 app.use(bodyParser());
 app.post('/attendance/bulk', adminController.markAttendanceBulk);
+app.patch('/account-status', adminController.updateAccountStatus);
 
 describe('adminController', () => {
   afterEach(() => {
@@ -49,6 +54,40 @@ describe('adminController', () => {
       expect(Registration.findByPk).toHaveBeenCalledWith('r2');
       // two updates called
       expect(dummyReg.update).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('PATCH /account-status', () => {
+    test('returns 400 for an invalid status value', async () => {
+      const res = await request(app)
+        .patch('/account-status')
+        .send({ userId: 'u1', status: 'paused' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.message).toMatch(/status must be active or inactive/);
+    });
+
+    test('updates a user account status in the backend', async () => {
+      const update = jest.fn().mockResolvedValue();
+      User.findOne.mockResolvedValue({
+        id: 'u1',
+        email: 'demo@example.com',
+        accountStatus: 'active',
+        update
+      });
+
+      const res = await request(app)
+        .patch('/account-status')
+        .send({ userId: 'u1', status: 'inactive' });
+
+      expect(res.status).toBe(200);
+      expect(User.findOne).toHaveBeenCalledWith({ where: { id: 'u1' } });
+      expect(update).toHaveBeenCalledWith({ accountStatus: 'inactive' });
+      expect(res.body).toMatchObject({
+        userId: 'u1',
+        email: 'demo@example.com',
+        status: 'inactive'
+      });
     });
   });
 });

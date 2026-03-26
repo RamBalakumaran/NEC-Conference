@@ -141,6 +141,24 @@ const paymentModel = {
     });
   },
 
+  getPaymentsByUserIdentifiers: (identifiers, callback) => {
+    const values = Array.from(new Set((Array.isArray(identifiers) ? identifiers : [identifiers]).filter(Boolean)));
+    if (!values.length) {
+      return callback(null, []);
+    }
+
+    const placeholders = values.map(() => '?').join(', ');
+    const query = `SELECT * FROM payments WHERE userId IN (${placeholders}) ORDER BY createdAt DESC`;
+
+    db.query(query, values, (err, result) => {
+      if (err) {
+        console.error('Error fetching payments by identifiers:', err);
+        return callback(err, null);
+      }
+      return callback(null, result);
+    });
+  },
+
   getPendingPayment: (userId, callback) => {
     const query = `
       SELECT * FROM payments

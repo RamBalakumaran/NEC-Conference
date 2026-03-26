@@ -35,7 +35,7 @@ const Signup = () => {
     setFormData({ 
       ...formData, 
       year: '', 
-      department: '', 
+      department: selectedRole === 'industry' ? 'Industry' : '', 
       designation: '' 
     });
   };
@@ -49,6 +49,7 @@ const Signup = () => {
       const payload = { 
         ...formData,
         college: formData.orgName, 
+        department: role === 'industry' ? 'Industry' : formData.department,
         role 
       };
       

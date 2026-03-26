@@ -5,7 +5,7 @@ const { sequelize } = require("../model");
 const { Op } = require("sequelize");
 
 const normalizeEvents = (events) => {
-  if (!Array.isArray(events)) return [];
+  if (!Array.isArray(events)) return[];
   return Array.from(
     new Set(
       events
@@ -54,7 +54,8 @@ exports.saveCartState = async (req, res) => {
     const { userData, selectedEvents, amount, cartUpdatedAt, sendPendingEmail } = req.body;
     let pendingEmailSent = false;
 
-    console.log("saveCartState body:", JSON.stringify(req.body).slice(0, 1000));
+    // Uncomment the below line if you want to debug incoming cart data in your terminal
+    // console.log("saveCartState body:", JSON.stringify(req.body).slice(0, 1000));
 
     if (!userData || !userData.email) {
       return res.status(400).json({ message: "User data required" });
@@ -77,7 +78,7 @@ exports.saveCartState = async (req, res) => {
     );
 
     let registration = null;
-    let isStale = false; // Track this to handle responses outside the transaction
+    let isStale = false; // Track this to handle responses safely outside the transaction
 
     // Define values OUTSIDE the transaction so the email logic at the bottom can read it
     const incomingCartUpdatedAt = Number(cartUpdatedAt || Date.now());
@@ -92,8 +93,7 @@ exports.saveCartState = async (req, res) => {
     // perform read+write inside a transaction to avoid race conditions
     await sequelize.transaction(async (t) => {
       registration = await Registration.findOne({
-        where: {[Op.and]: base,
-        },
+        where: {[Op.and]: base },
         order: [["updatedAt", "DESC"]],
         transaction: t,
         lock: t.LOCK.UPDATE
@@ -138,33 +138,34 @@ exports.saveCartState = async (req, res) => {
 
     // 2. Send "registered but payment pending" mail only when explicitly requested
     if (sendPendingEmail === true && Array.isArray(values.selectedEvents) && values.selectedEvents.length > 0) {
-      let participantId = userData?.participantId || "-";
+      // Wrapped in its own try/catch so email failures NEVER cause a 500 error for the cart
       try {
+        let participantId = userData?.participantId || "-";
         const uid = userId || null;
         let user = null;
         if (uid) user = await User.findOne({ where: { id: uid } });
         if (!user && userData?.email) user = await User.findOne({ where: { email: userData.email } });
         if (user?.participantId) participantId = user.participantId;
-      } catch (_) {
-        // do not fail cart save for participantId lookup issues
-      }
 
-      const sent = await sendRegistrationReminderEmail(
-        {
-          name: userData?.name || "Participant",
-          email: userData?.email,
-          participantId,
-          userId: userId || null,
-        },
-        registration.id,
-        {
-          participantId,
-          amount: amount || 0,
-          events: values.selectedEvents,
-          email: userData?.email,
-        }
-      );
-      pendingEmailSent = !!sent;
+        const sent = await sendRegistrationReminderEmail(
+          {
+            name: userData?.name || "Participant",
+            email: userData?.email,
+            participantId,
+            userId: uid,
+          },
+          registration.id,
+          {
+            participantId,
+            amount: amount || 0,
+            events: values.selectedEvents,
+            email: userData?.email,
+          }
+        );
+        pendingEmailSent = !!sent;
+      } catch (emailErr) {
+        console.warn("Non-fatal warning: Failed to send pending email:", emailErr.message);
+      }
     }
 
     // 3. Send final success response
@@ -174,10 +175,11 @@ exports.saveCartState = async (req, res) => {
     console.error("Save Cart Error:", e);
     // Double check that headers weren't sent to prevent crashes
     if (!res.headersSent) {
-      return res.status(500).json({ error: e.message });
+      return res.status(500).json({ error: "Server error saving cart data." });
     }
   }
 };
+
 // 4. Validate User
 exports.validateUser = (req, res) => {
   res.status(200).json({ message: "User is valid" });

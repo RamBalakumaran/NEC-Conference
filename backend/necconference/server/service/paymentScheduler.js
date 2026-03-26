@@ -28,13 +28,19 @@ const checkPendingPayments = async () => {
       for (const payment of payments) {
         try {
           if (payment.razorpayOrderId) {
-            const result = await isPaymentCaptured(payment.razorpayPaymentId);
+            const paymentId = String(payment.razorpayPaymentId || payment.transactionId || "").trim();
+            if (!paymentId) {
+              console.log(`Skipping payment verification for ${payment.razorpayOrderId}: no Razorpay payment ID recorded yet`);
+              continue;
+            }
+
+            const result = await isPaymentCaptured(paymentId);
             if (result.captured) {
               paymentModel.updatePaymentStatus(
                 payment.razorpayOrderId,
                 "Paid",
-                payment.razorpayPaymentId,
-                payment.razorpayPaymentId,
+                paymentId,
+                paymentId,
                 () => {} // ignore callback errors here
               );
               console.log(`Payment ${payment.razorpayOrderId} marked Paid by scheduler`);

@@ -20,7 +20,7 @@ const getEventDisplayName = (e) => {
 };
 
 const CONFERENCE_EVENT_NAMES =[
-  'Code and Connect with Arduino and ESP32',
+  'Code and Connect with Arduino and ESP32', 
   'EV Technology and Battery Management Systems',
   'Digital Fabrication 4.0: Smart Manufacturing',
   'CAD to Cut: Wirecut EDM Workshop',
@@ -31,8 +31,8 @@ const CONFERENCE_EVENT_NAMES =[
   'From Arrays to Intelligence: Evolving Antenna Technologies - Massive MIMO, RIS, and Beyond',
   'Emerging Trends in Semiconductors & Embedded Systems',
   'Quantum Computing: Concepts & Applications',
-  'Augmented Reality Systems',
-  'Geospatial Applications in Computing',
+  'Augmented Reality Systems', 
+  'Geospatial Applications in Computing', 
   'N8n: AI-Driven Visual Workflow Automation',
   'Challenges of Emerging AI Agents in SaaS',
   'Mathematics in the Age of AI',
@@ -60,30 +60,93 @@ const toEventArray = (value) => {
   return[];
 };
 
-const STATUS_STORAGE_KEY = 'nec-admin-user-statuses';
+const normalizeAccountStatus = (value) =>
+  String(value || '').toLowerCase() === 'inactive' ? 'inactive' : 'active';
 
-const loadStoredUserStatuses = () => {
-  if (typeof window === 'undefined') return {};
-  try {
-    const raw = window.localStorage.getItem(STATUS_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
+const sameUserRecord = (left, right) => {
+  const leftUserId = String(left?.userId || '').trim();
+  const rightUserId = String(right?.userId || '').trim();
+  if (leftUserId && rightUserId) return leftUserId === rightUserId;
+
+  const leftEmail = String(left?.email || '').trim().toLowerCase();
+  const rightEmail = String(right?.email || '').trim().toLowerCase();
+  return Boolean(leftEmail && rightEmail && leftEmail === rightEmail);
 };
 
-const persistUserStatuses = (payload) => {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(STATUS_STORAGE_KEY, JSON.stringify(payload));
-  } catch {
-    // ignore storage errors
+const updateRowsWithAccountStatus = (rows, targetUser, status) =>
+  rows.map((row) =>
+    sameUserRecord(row, targetUser) ? { ...row, accountStatus: status } : row
+  );
+
+const getUserIdentityKey = (user) =>
+  String(user?.userId || user?.email || user?.pid || user?._id || '')
+    .trim()
+    .toLowerCase();
+
+const hasPositiveAmount = (value) => Number(value || 0) > 0;
+
+const normalizePaymentStatus = (value, amount = 0) => {
+  const normalized = String(value || '').toLowerCase();
+  if (value === true || normalized === 'paid' || normalized === 'captured') {
+    return hasPositiveAmount(amount) ? 'Paid' : 'Pending';
   }
+  if (normalized === 'failed') return 'Failed';
+  return 'Pending';
 };
 
-const deriveUserStatusKey = (user) => {
-  if (!user) return 'unknown';
-  return user._id || user.userId || user.email || user.pid || user.name || 'unknown';
+const getPaymentStatusRank = (value, amount = 0) => {
+  const status = normalizePaymentStatus(value, amount);
+  if (status === 'Paid') return 3;
+  if (status === 'Pending') return 2;
+  if (status === 'Failed') return 1;
+  return 0;
+};
+
+const getComparableTime = (...values) => {
+  for (const value of values) {
+    if (!value) continue;
+    const timestamp = new Date(value).getTime();
+    if (Number.isFinite(timestamp)) return timestamp;
+  }
+  return 0;
+};
+
+const comparePaymentAttempts = (left, right) => {
+  const statusDiff =
+    getPaymentStatusRank(right?.status, right?.amount) -
+    getPaymentStatusRank(left?.status, left?.amount);
+  if (statusDiff !== 0) return statusDiff;
+
+  const timeDiff =
+    getComparableTime(right?.updatedAt, right?.createdAt) -
+    getComparableTime(left?.updatedAt, left?.createdAt);
+  if (timeDiff !== 0) return timeDiff;
+
+  return Number(right?.amount || 0) - Number(left?.amount || 0);
+};
+
+const pickPreferredUserRow = (current, candidate) => {
+  if (!current) return candidate;
+
+  const statusDiff =
+    getPaymentStatusRank(candidate?.paymentStatus, candidate?.paymentAmount) -
+    getPaymentStatusRank(current?.paymentStatus, current?.paymentAmount);
+  if (statusDiff !== 0) return statusDiff > 0 ? candidate : current;
+
+  const timeDiff =
+    getComparableTime(candidate?.createdAt) -
+    getComparableTime(current?.createdAt);
+  if (timeDiff !== 0) return timeDiff > 0 ? candidate : current;
+
+  const amountDiff = Number(candidate?.paymentAmount || 0) - Number(current?.paymentAmount || 0);
+  if (amountDiff !== 0) return amountDiff > 0 ? candidate : current;
+
+  const eventDiff =
+    Number(candidate?.selectedEvents?.length || 0) -
+    Number(current?.selectedEvents?.length || 0);
+  if (eventDiff !== 0) return eventDiff > 0 ? candidate : current;
+
+  return candidate;
 };
 
 // --- Helper Components ---
@@ -151,7 +214,6 @@ const StatusBadge = ({ status }) => {
 
 const ADMIN_TABS =[
   { id: 'dashboard', label: 'Dashboard', icon: <BarChart3 size={18} />, description: 'KPIs plus reminder controls' },
-  { id: 'active-users', label: 'Active Users', icon: <Eye size={18} />, description: 'Live list from the last 30 minutes' },
   { id: 'analytics', label: 'Analytics', icon: <TrendingUp size={18} />, description: 'Department & event insights' },
   { id: 'db-status', label: 'Database Status', icon: <Database size={18} />, description: 'Toggle active/inactive and view every record' },
   { id: 'reports', label: 'Registrations', icon: <Download size={18} />, description: 'Filtered, export-ready registrations' },
@@ -195,7 +257,6 @@ const AdminDashboard = () => {
   const [attendees, setAttendees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const[activeUsers, setActiveUsers] = useState([]);
   const [deptAnalytics, setDeptAnalytics] = useState({});
   const[eventAnalytics, setEventAnalytics] = useState({});
   
@@ -209,8 +270,6 @@ const AdminDashboard = () => {
   
   const [departments, setDepartments] = useState([]);
   const [events, setEvents] = useState(CONFERENCE_EVENT_NAMES);
-  const[stats, setStats] = useState({});
-  const [userStatuses, setUserStatuses] = useState(() => loadStoredUserStatuses());
   const [dbSearchTerm, setDbSearchTerm] = useState('');
   const[dbStatusFilter, setDbStatusFilter] = useState('All');
   
@@ -223,21 +282,40 @@ const AdminDashboard = () => {
   const isLoggingOut = useRef(false);
   const [attendanceRows, setAttendanceRows] = useState([]);
 
-  const getUserStatusValue = (user) => {
-    const key = deriveUserStatusKey(user);
-    return userStatuses[key] || 'active';
-  };
+  const getUserStatusValue = (user) => normalizeAccountStatus(user?.accountStatus);
 
   const isUserActive = (user) => getUserStatusValue(user) === 'active';
 
-  const toggleUserStatus = (user) => {
-    const key = deriveUserStatusKey(user);
-    setUserStatuses((prev) => {
-      const nextStatus = prev[key] === 'inactive' ? 'active' : 'inactive';
-      const next = { ...prev,[key]: nextStatus };
-      persistUserStatuses(next);
-      return next;
-    });
+  const toggleUserStatus = async (user) => {
+    const token = localStorage.getItem('adminToken');
+    const currentStatus = getUserStatusValue(user);
+    const nextStatus = currentStatus === 'inactive' ? 'active' : 'inactive';
+    const payload = {
+      status: nextStatus,
+      ...(user.userId ? { userId: user.userId } : {}),
+      ...(user.email ? { email: user.email } : {})
+    };
+
+    if (!payload.userId && !payload.email) return;
+
+    setAttendees((prev) => updateRowsWithAccountStatus(prev, user, nextStatus));
+    setAttendanceRows((prev) => updateRowsWithAccountStatus(prev, user, nextStatus));
+
+    try {
+      const { data } = await axios.patch(
+        'http://localhost:5200/conference/api/admin/account-status',
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const persistedStatus = normalizeAccountStatus(data?.status || nextStatus);
+      setAttendees((prev) => updateRowsWithAccountStatus(prev, user, persistedStatus));
+      setAttendanceRows((prev) => updateRowsWithAccountStatus(prev, user, persistedStatus));
+    } catch (error) {
+      console.error('Failed to update account status', error);
+      setAttendees((prev) => updateRowsWithAccountStatus(prev, user, currentStatus));
+      setAttendanceRows((prev) => updateRowsWithAccountStatus(prev, user, currentStatus));
+    }
   };
 
   useEffect(() => {
@@ -289,75 +367,100 @@ const AdminDashboard = () => {
 
         const registrationRows = mainRes.data.registrations ||[];
         const transactionRows = mainRes.data.transactions ||[];
+        const transactionsByEmail = new Map();
 
-        const registrationByEmail = new Map(
-          registrationRows
-            .map((r) => ({
-              ...r,
-              email: r?.userData?.email || r?.user?.email || r?.contactEmail || ''
-            }))
-            .filter((r) => r.email)
-            .map((r) => [String(r.email).toLowerCase(), r])
-        );
+        transactionRows.forEach((txn) => {
+          const email = String(txn?.user?.email || txn?.userId || '').trim().toLowerCase();
+          if (!email) return;
+          const existing = transactionsByEmail.get(email) || [];
+          existing.push(txn);
+          transactionsByEmail.set(email, existing);
+        });
 
-        const rawData = [...registrationRows, ...transactionRows];
+        transactionsByEmail.forEach((attempts, email) => {
+          transactionsByEmail.set(email, [...attempts].sort(comparePaymentAttempts));
+        });
 
-        const enhancedData = rawData.map(item => {
+        const enhancedData = registrationRows.map(item => {
           const userData = item.user || item.userData || {};
           const email = String(userData.email || item.userId || item.contactEmail || '').toLowerCase();
-          const regMatch = email ? registrationByEmail.get(email) : null;
+          const bestTransaction = email ? transactionsByEmail.get(email)?.[0] : null;
           
           if (userData.role === 'admin' || userData.isAdmin || userData.email === 'admin@gmail.com') {
               return null;
           }
 
-          const payment = item.payment || regMatch?.payment || {};
-          
-          let pStatus = payment.paymentStatus || payment.status || item.status || 'Pending';
-          if (pStatus === true || String(pStatus).toLowerCase() === 'paid') pStatus = 'Paid';
-          else if (String(pStatus).toLowerCase() === 'failed') pStatus = 'Failed';
-          else pStatus = 'Pending';
+          const payment = item.payment || {};
+          const resolvedAmount = Number(bestTransaction?.amount ?? payment.amount ?? item.amount ?? item.paymentAmount ?? 0);
+          const pStatus = normalizePaymentStatus(
+            bestTransaction?.status || payment.paymentStatus || payment.status || item.status,
+            resolvedAmount
+          );
 
           const evtsRaw = Array.isArray(item.selectedEvents) && item.selectedEvents.length > 0
             ? item.selectedEvents
-            : (Array.isArray(regMatch?.selectedEvents) && regMatch.selectedEvents.length > 0
-              ? regMatch.selectedEvents
+            : (Array.isArray(bestTransaction?.events) && bestTransaction.events.length > 0
+              ? bestTransaction.events
               : toEventArray(item.events));
           const normalizedEvents = evtsRaw.map(e => ({ name: getEventDisplayName(e) }));
 
           return {
-            _id: regMatch?.id || regMatch?._id || item.id || item._id || undefined,
+            _id: item.id || item._id || undefined,
+            userId: userData.id || item.userId || null,
             name: userData.name || userData.fullName || userData.firstName || (item.userId ? String(item.userId).split('@')[0] : ''),
             pid: userData.participantId || userData.pid || item.pid || '-',
-            email: userData.email || item.userId || '',
+            email: userData.email || item.contactEmail || item.userId || '',
             phone: userData.phone || userData.mobile || '',
             department: userData.department || userData.dept || item.department || 'Unknown',
             year: userData.year || item.year || '',
             college: userData.college || item.college || '',
             selectedEvents: normalizedEvents,
-            paymentAmount: payment.amount || item.amount || item.paymentAmount || 0,
+            paymentAmount: resolvedAmount,
             paymentStatus: pStatus,
-            transactionId: payment.transactionId || payment.paymentId || item.transactionId || item.razorpayPaymentId || 'N/A',
-            attendance: regMatch?.attendance || item.attendance || { day1: false, day2: false, day3: false },
-            createdAt: regMatch?.registeredOn || item.createdAt || item.registeredOn || userData.createdAt || null,
+            transactionId:
+              bestTransaction?.transactionId ||
+              bestTransaction?.razorpayPaymentId ||
+              payment.transactionId ||
+              payment.paymentId ||
+              item.transactionId ||
+              item.razorpayPaymentId ||
+              'N/A',
+            attendance: item.attendance || { day1: false, day2: false, day3: false },
+            createdAt:
+              item.registeredOn ||
+              item.createdAt ||
+              bestTransaction?.updatedAt ||
+              bestTransaction?.createdAt ||
+              userData.createdAt ||
+              null,
+            accountStatus: normalizeAccountStatus(userData.accountStatus || item.accountStatus),
           };
         }).filter(Boolean);
+
+        const attendeeByIdentity = new Map();
+        enhancedData.forEach((row, index) => {
+          const key = getUserIdentityKey(row) || `attendee-${index}`;
+          attendeeByIdentity.set(key, pickPreferredUserRow(attendeeByIdentity.get(key), row));
+        });
+        const consolidatedAttendees = Array.from(attendeeByIdentity.values());
 
         const attendanceData = registrationRows.map(item => {
           const userData = item.user || item.userData || {};
           if (userData.role === 'admin' || userData.isAdmin || userData.email === 'admin@gmail.com') return null;
 
           const payment = item.payment || {};
-          let pStatus = payment.paymentStatus || payment.status || item.status || 'Pending';
-          if (pStatus === true || String(pStatus).toLowerCase() === 'paid') pStatus = 'Paid';
-          else if (String(pStatus).toLowerCase() === 'failed') pStatus = 'Failed';
-          else pStatus = 'Pending';
+          const resolvedAmount = Number(payment.amount || 0);
+          const pStatus = normalizePaymentStatus(
+            payment.paymentStatus || payment.status || item.status,
+            resolvedAmount
+          );
 
           const evtsRaw = Array.isArray(item.selectedEvents) ? item.selectedEvents :[];
           const normalizedEvents = evtsRaw.map(e => ({ name: getEventDisplayName(e) }));
 
           return {
             _id: item._id || item.id || undefined,
+            userId: userData.id || item.userId || null,
             name: userData.name || userData.fullName || userData.firstName || '',
             pid: userData.participantId || userData.pid || item.pid || '-',
             email: userData.email || item.contactEmail || '',
@@ -366,25 +469,24 @@ const AdminDashboard = () => {
             year: userData.year || item.year || '',
             college: userData.college || item.college || '',
             selectedEvents: normalizedEvents,
-            paymentAmount: payment.amount || 0,
+            paymentAmount: resolvedAmount,
             paymentStatus: pStatus,
             transactionId: payment.transactionId || 'N/A',
             attendance: item.attendance || { day1: false, day2: false, day3: false },
             createdAt: item.registeredOn || item.createdAt || userData.createdAt || null,
+            accountStatus: normalizeAccountStatus(userData.accountStatus || item.accountStatus),
           };
         }).filter(Boolean);
 
-        setAttendees(enhancedData);
+        setAttendees(consolidatedAttendees);
         setAttendanceRows(attendanceData);
-        setStats(mainRes.data.stats || {});
-
-        const dataDepts =[...new Set(enhancedData.map(item => item.department).filter(Boolean))];
+        const dataDepts =[...new Set(consolidatedAttendees.map(item => item.department).filter(Boolean))];
         const allDepts = [...new Set([...ALL_DEPARTMENTS, ...dataDepts])];
         setDepartments(allDepts);
         
         const actualEventNames = Array.from(
           new Set(
-            enhancedData
+            consolidatedAttendees
               .flatMap((item) => item.selectedEvents ||[])
               .map((e) => getEventDisplayName(e))
               .filter(Boolean)
@@ -395,9 +497,6 @@ const AdminDashboard = () => {
         setLoading(false); 
 
         const extraRequests = await Promise.allSettled([
-          axios.get('http://localhost:5200/conference/api/admin/active-users?minutes=30', {
-            headers: { Authorization: `Bearer ${token}` }
-          }),
           axios.get('http://localhost:5200/conference/api/admin/analytics/department', {
             headers: { Authorization: `Bearer ${token}` }
           }),
@@ -406,9 +505,8 @@ const AdminDashboard = () => {
           })
         ]);
 
-        const[activeRes, deptRes, eventRes] = extraRequests;
+        const[deptRes, eventRes] = extraRequests;
 
-        if (activeRes.status === 'fulfilled') setActiveUsers(activeRes.value.data.users ||[]);
         if (deptRes.status === 'fulfilled') setDeptAnalytics(deptRes.value.data || {});
         if (eventRes.status === 'fulfilled') setEventAnalytics(eventRes.value.data || {});
 
@@ -463,6 +561,21 @@ const AdminDashboard = () => {
 
   const displayData = getFilteredDataFrom(attendees, { hideInactive: true });
   const attendanceDisplayData = getFilteredDataFrom(attendanceRows, { hideInactive: true });
+  const allUsersByIdentity = new Map(
+    attendees
+      .map((user) => [getUserIdentityKey(user), user])
+      .filter(([key]) => Boolean(key))
+  );
+  const allUniqueUsers = Array.from(allUsersByIdentity.values());
+  const activeAttendeeRows = attendees.filter(isUserActive);
+  const activeUsersByIdentity = new Map(
+    activeAttendeeRows
+      .map((user) => [getUserIdentityKey(user), user])
+      .filter(([key]) => Boolean(key))
+  );
+  const activeUniqueUsers = Array.from(activeUsersByIdentity.values());
+  const activePaidRows = activeAttendeeRows.filter(user => user.paymentStatus === 'Paid');
+  const activeUsersCount = activeUniqueUsers.length;
 
   const filteredDropdownEvents = events.filter(ev => {
     if (!ev || typeof ev !== 'string') return false; 
@@ -595,11 +708,10 @@ const AdminDashboard = () => {
     navigate('/', { replace: true });
   };
 
-  const totalRevenue = stats.totalRevenue || 0;
-  const paidCount = stats.registered || 0;
-  const activeNow = stats.activeNow || 0;
-  const pendingPayment = stats.pendingPayment || 0;
-  const paymentFailed = stats.paymentFailed || 0;
+  const totalUsersCount = allUniqueUsers.length;
+  const totalRevenue = activePaidRows.reduce((sum, user) => sum + Number(user.paymentAmount || 0), 0);
+  const paidCount = activePaidRows.length;
+  const pendingPayment = activeAttendeeRows.filter(user => user.paymentStatus === 'Pending').length;
 
   if (loading) {
     return (
@@ -646,9 +758,9 @@ const AdminDashboard = () => {
       </div>
 
       {/* Top Stats Cards */}
-      <div className="relative z-10 w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10 px-4 lg:px-8">
-        <StatCard icon={<Users className="w-6 h-6" />} label="Total Users" value={stats.totalUsers || 0} color="blue" />
-        <StatCard icon={<Eye className="w-6 h-6" />} label="Active Now" value={activeNow} color="green" />
+      <div className="hidden">
+        <StatCard icon={<Users className="w-6 h-6" />} label="Total Users" value={totalUsersCount} color="blue" />
+        <StatCard icon={<Eye className="w-6 h-6" />} label="Active Users" value={activeUsersCount} color="green" />
         <StatCard icon={<CheckCircle className="w-6 h-6" />} label="Paid" value={paidCount} color="pink" />
         <StatCard icon={<DollarSign className="w-6 h-6" />} label="Revenue" value={`₹${totalRevenue.toLocaleString()}`} color="purple" />
       </div>
@@ -694,10 +806,13 @@ const AdminDashboard = () => {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <StatusCard label="Pending Payment" value={pendingPayment} color="yellow" />
-                  <StatusCard label="Payment Failed" value={paymentFailed} color="red" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 [&>*:nth-child(4)]:hidden [&>*:nth-child(5)]:hidden">
+                  <StatCard icon={<Users className="w-6 h-6" />} label="Total Users" value={totalUsersCount} color="blue" />
+                  <StatCard icon={<Eye className="w-6 h-6" />} label="Active Users" value={activeUsersCount} color="green" />
+                  <StatCard icon={<CheckCircle className="w-6 h-6" />} label="Paid" value={paidCount} color="pink" />
+                  <StatCard icon={<DollarSign className="w-6 h-6" />} label="Revenue" value={`â‚¹${totalRevenue.toLocaleString()}`} color="purple" />
                   <StatusCard label="Paid ✓" value={paidCount} color="green" />
+                  <StatCard icon={<DollarSign className="w-6 h-6" />} label="Revenue" value={`${String.fromCharCode(8377)}${totalRevenue.toLocaleString()}`} color="purple" />
                 </div>
 
                 <div className="bg-[#130720]/80 backdrop-blur-xl border border-purple-500/20 p-6 rounded-2xl shadow-2xl">
@@ -717,54 +832,6 @@ const AdminDashboard = () => {
                       {emailLoading ? <><Loader2 size={16} className="animate-spin" /> Sending...</> : <><Mail size={16} /> Send Reminders</>}
                     </button>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* ACTIVE USERS TAB */}
-            {activeTab === 'active-users' && (
-              <div className="w-full">
-                <div className="bg-[#130720]/80 backdrop-blur-xl border border-purple-500/20 p-6 rounded-2xl shadow-2xl">
-                  <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-                    <Eye className="text-green-400" size={24} />
-                    Users Active in Last 30 Minutes
-                  </h2>
-
-                  {activeUsers.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400">
-                      No active users at the moment
-                    </div>
-                  ) : (
-                    <div className="w-full overflow-x-auto rounded-lg border border-purple-500/30 custom-scrollbar">
-                      <table className="w-full min-w-[700px] text-sm">
-                        <thead className="border-b border-purple-500/30 bg-[#0a0412]">
-                          <tr className="text-purple-300 whitespace-nowrap">
-                            <th className="text-left py-4 px-4 font-bold tracking-wider">Name</th>
-                            <th className="text-left py-4 px-4 font-bold tracking-wider">Email</th>
-                            <th className="text-left py-4 px-4 font-bold tracking-wider">Department</th>
-                            <th className="text-left py-4 px-4 font-bold tracking-wider">Last Login</th>
-                            <th className="text-center py-4 px-4 font-bold tracking-wider">Login Count</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {activeUsers.map((user, idx) => (
-                            <tr
-                              key={`${user.email || user._id || 'active'}-${idx}`}
-                              className="border-b border-purple-500/10 hover:bg-purple-500/5 transition-colors"
-                            >
-                              <td className="py-3 px-4 text-white font-medium align-top">{user.name}</td>
-                              <td className="py-3 px-4 text-gray-300 align-top">{user.email}</td>
-                              <td className="py-3 px-4 text-gray-300 align-top">{user.department}</td>
-                              <td className="py-3 px-4 text-gray-400 align-top whitespace-nowrap">
-                                {user.lastLogin ? new Date(user.lastLogin).toLocaleTimeString() : 'N/A'}
-                              </td>
-                              <td className="py-3 px-4 text-center text-green-400 font-bold align-top">{user.loginCount}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
                 </div>
               </div>
             )}

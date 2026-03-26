@@ -33,6 +33,8 @@ const normalizeEventNames = (events) => {
     .filter(Boolean);
 };
 
+const PAYMENT_BILL_CONFERENCE_NAME = "NEC Pre Conference 2026";
+
 const wrapEmail = ({ title, intro, content, footerNote }) => `
   <div style="font-family:Arial,Helvetica,sans-serif;background:#f6f7fb;padding:24px;color:#111827;">
     <div style="max-width:700px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
@@ -206,10 +208,10 @@ const sendEventBookConfirmationEmail = async (userData, transactionId, amount, b
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: participantEmail,
-    subject: "PAYMENT BILL (PID) | NEC Conference 2026",
+    subject: `PAYMENT BILL (PID) | ${PAYMENT_BILL_CONFERENCE_NAME}`,
     html: wrapEmail({
-      title: "Payment Bill (PID) - Registration Confirmed",
-      intro: `Dear <strong>${escapeHtml(participantName)}</strong>, your payment was successful. Your registration bill details are below.`,
+      title: `Payment Bill (PID) - ${PAYMENT_BILL_CONFERENCE_NAME}`,
+      intro: `Dear <strong>${escapeHtml(participantName)}</strong>, your payment for ${escapeHtml(PAYMENT_BILL_CONFERENCE_NAME)} was successful. Your registration bill details are below.`,
       content: `
         <table style="width:100%;border-collapse:collapse;font-size:14px;margin:14px 0;">
           ${makeKeyValueRows([
@@ -246,13 +248,13 @@ const sendEventBookConfirmationEmail = async (userData, transactionId, amount, b
         </div>
         ` : ''}
 
-        <p style="margin:14px 0 0 0;line-height:1.6;">Please carry this bill copy for verification at the venue.</p>
+        <p style="margin:14px 0 0 0;line-height:1.6;">Please carry this bill copy for ${escapeHtml(PAYMENT_BILL_CONFERENCE_NAME)} verification at the venue.</p>
       `,
     }),
     attachments: qrCodeBuffer
       ? [
           {
-            filename: `NEC-Registration-QR-${participantId || "PID"}.png`,
+            filename: `NEC-Pre-Conference-Registration-QR-${participantId || "PID"}.png`,
             content: qrCodeBuffer,
             contentType: "image/png",
             cid: "registration-qr"

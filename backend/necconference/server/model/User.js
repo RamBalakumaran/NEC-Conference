@@ -21,6 +21,7 @@ const User = sequelize.models.User || sequelize.define('User', {
   year: { type: DataTypes.STRING, allowNull: true },
   isAdmin: { type: DataTypes.BOOLEAN, defaultValue: false },
   role: { type: DataTypes.STRING, defaultValue: 'User' },
+  accountStatus: { type: DataTypes.STRING, allowNull: false, defaultValue: 'active' },
   // Login Tracking
   lastLogin: { type: DataTypes.DATE, allowNull: true },
   loginCount: { type: DataTypes.INTEGER, defaultValue: 0 },

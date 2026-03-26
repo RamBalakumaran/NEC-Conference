@@ -4,12 +4,70 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
 const { assignParticipantIdToUser } = require('../service/participantIdService');
+const { paymentModel } = require('../model/paymentModel');
 
 // FIX: Ensure this path matches your actual file structure
 // In previous steps, we created it in ../service/emailService
 const { sendWelcomeEmail, sendLoginAlert, sendRegistrationReminderEmail } = require('../config/email'); 
 
 const secret = process.env.JWT_SECRET || "NEC_CONFERENCE_SECRET_KEY_2025";
+
+const toCanonicalStatus = (status) => {
+  const normalized = String(status || '').toLowerCase();
+  if (normalized === 'captured' || normalized === 'paid' || normalized === 'successful' || normalized === 'success') {
+    return 'Paid';
+  }
+  if (normalized === 'failed' || normalized === 'cancelled' || normalized === 'canceled') {
+    return 'Failed';
+  }
+  if (normalized === 'refunded') {
+    return 'Refunded';
+  }
+  return 'Pending';
+};
+
+const parseArrayField = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+const normalizeEvents = (events) =>
+  Array.from(
+    new Set(
+      parseArrayField(events)
+        .map((eventItem) => (typeof eventItem === 'string' ? eventItem : eventItem?.name || eventItem?.title || eventItem?.id || ''))
+        .map((eventName) => String(eventName || '').trim())
+        .filter(Boolean)
+    )
+  );
+
+const normalizeActivityLog = (activityLog, registration) =>
+  parseArrayField(activityLog)
+    .map((entry, index) => ({
+      id: `${registration?.id || 'registration'}-${index}`,
+      action: String(entry?.action || 'Status Updated').trim() || 'Status Updated',
+      timestamp: entry?.timestamp || registration?.updatedAt || registration?.createdAt || null,
+      status: toCanonicalStatus(registration?.payment?.paymentStatus || registration?.status),
+      registrationId: registration?.id || null,
+      events: normalizeEvents(registration?.selectedEvents),
+    }))
+    .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+
+const getPaymentsByIdentifiers = (identifiers) =>
+  new Promise((resolve, reject) => {
+    paymentModel.getPaymentsByUserIdentifiers(identifiers, (err, payments) => {
+      if (err) return reject(err);
+      return resolve(payments || []);
+    });
+  });
 
 exports.signup = async (req, res) => {
   const { name, email, password, college, department, phone, year, role } = req.body;
@@ -19,10 +77,15 @@ exports.signup = async (req, res) => {
     if (existingUser) return res.status(400).json({ message: "User already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 12);
+    const normalizedRole = String(role || '').trim().toLowerCase();
+    const resolvedDepartment =
+      normalizedRole === 'industry'
+        ? 'Industry'
+        : String(department || '').trim() || null;
     
     // Create User
     const result = await User.create({ 
-      name, email, password: hashedPassword, college, department, phone, year, role 
+      name, email, password: hashedPassword, college, department: resolvedDepartment, phone, year, role 
     });
     await assignParticipantIdToUser(result);
 
@@ -64,6 +127,124 @@ exports.login = async (req, res) => {
   } catch (error) {
     console.error("Login Controller Error:", error);
     res.status(500).json({ message: "Something went wrong" });
+  }
+};
+
+exports.getProfile = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const existingUser = await User.findByPk(userId);
+    if (!existingUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const userData = existingUser.toJSON ? existingUser.toJSON() : { ...existingUser };
+    delete userData.password;
+
+    const identifiers = Array.from(new Set([userData.id, userData.email].filter(Boolean)));
+
+    const [registrations, payments] = await Promise.all([
+      Registration.findAll({
+        where: {
+          [Op.or]: [
+            userData.id ? { userId: userData.id } : null,
+            userData.email ? { contactEmail: userData.email } : null,
+          ].filter(Boolean),
+        },
+        order: [['updatedAt', 'DESC']],
+      }),
+      getPaymentsByIdentifiers(identifiers),
+    ]);
+
+    const paymentHistory = (payments || []).map((paymentRow) => {
+      const status = toCanonicalStatus(paymentRow?.status);
+      return {
+        id: paymentRow?.id || null,
+        amount: Number(paymentRow?.amount || 0),
+        currency: paymentRow?.currency || 'INR',
+        status,
+        events: normalizeEvents(paymentRow?.events),
+        orderId: paymentRow?.razorpayOrderId || null,
+        paymentId: paymentRow?.razorpayPaymentId || null,
+        transactionId: paymentRow?.transactionId || null,
+        createdAt: paymentRow?.createdAt || null,
+        updatedAt: paymentRow?.updatedAt || null,
+        canDownloadBill: status === 'Paid',
+      };
+    });
+
+    const registrationHistory = (registrations || []).map((registration) => {
+      const payment = registration?.payment || {};
+      return {
+        id: registration?.id || null,
+        status: toCanonicalStatus(payment?.paymentStatus || registration?.status),
+        selectedEvents: normalizeEvents(registration?.selectedEvents),
+        amount: Number(payment?.amount || 0),
+        transactionId: payment?.transactionId || null,
+        paymentDate: payment?.date || null,
+        registeredOn: registration?.registeredOn || registration?.createdAt || null,
+        updatedAt: registration?.updatedAt || null,
+        activityLog: normalizeActivityLog(registration?.activityLog, registration),
+      };
+    });
+
+    const activityHistory = registrationHistory
+      .flatMap((registration) => registration.activityLog)
+      .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+
+    const confirmedEvents = Array.from(
+      new Set([
+        ...(Array.isArray(userData.registeredEvents) ? userData.registeredEvents : []),
+        ...registrationHistory
+          .filter((registration) => registration.status === 'Paid')
+          .flatMap((registration) => registration.selectedEvents),
+        ...paymentHistory
+          .filter((payment) => payment.status === 'Paid')
+          .flatMap((payment) => payment.events),
+      ])
+    );
+
+    const summary = {
+      totalPayments: paymentHistory.length,
+      paidPayments: paymentHistory.filter((payment) => payment.status === 'Paid').length,
+      pendingPayments: paymentHistory.filter((payment) => payment.status === 'Pending').length,
+      failedPayments: paymentHistory.filter((payment) => payment.status === 'Failed').length,
+      totalPaidAmount: paymentHistory
+        .filter((payment) => payment.status === 'Paid')
+        .reduce((sum, payment) => sum + Number(payment.amount || 0), 0),
+      confirmedEvents: confirmedEvents.length,
+    };
+
+    res.status(200).json({
+      profile: {
+        id: userData.id,
+        participantId: userData.participantId || null,
+        name: userData.name,
+        email: userData.email,
+        role: userData.role || 'Participant',
+        organization: userData.college || null,
+        college: userData.college || null,
+        department: userData.department || null,
+        phone: userData.phone || null,
+        year: userData.year || null,
+        accountStatus: userData.accountStatus || 'active',
+        lastLogin: userData.lastLogin || null,
+        loginCount: Number(userData.loginCount || 0),
+        registeredEvents: confirmedEvents,
+        createdAt: userData.createdAt || null,
+      },
+      summary,
+      paymentHistory,
+      registrationHistory,
+      activityHistory,
+    });
+  } catch (error) {
+    console.error('Get Profile Error:', error);
+    res.status(500).json({ message: 'Unable to load profile history' });
   }
 };
 

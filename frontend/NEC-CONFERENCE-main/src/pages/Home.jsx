@@ -964,7 +964,7 @@ function Home() {
                   <button 
                     onClick={() => {
                       setSelectedTrack(null);
-                      navigate(user ? '/dashboard' : '/signup');
+                      navigate(user ? '/tracks' : '/signup');
                     }}
                     className="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg text-white font-bold text-sm hover:shadow-[0_0_20px_rgba(219,39,119,0.4)] transition-all flex items-center justify-center gap-2"
                   >

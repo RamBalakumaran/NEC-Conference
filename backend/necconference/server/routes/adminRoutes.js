@@ -4,6 +4,7 @@ const router = express.Router();
 // Destructure ALL exported functions
 const { 
     getAllRegistrations, 
+    updateAccountStatus,
     markAttendance, 
     markAttendanceBulk,
     getActiveUsers,
@@ -22,6 +23,7 @@ const {
 
 // 1. Main Data
 router.get('/registrations', getAllRegistrations);
+router.patch('/account-status', updateAccountStatus);
 
 // 2. Attendance
 router.post('/attendance', markAttendance);

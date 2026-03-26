@@ -7,6 +7,10 @@ const { Op } = require('sequelize');
 const { sequelize } = require('../model');
 const { assignParticipantIdToUser } = require('../service/participantIdService');
 const { paymentModel } = require('../model/paymentModel');
+const {
+    VALID_ACCOUNT_STATUSES,
+    normalizeAccountStatus
+} = require('../service/accountStatusService');
 
 const eventNameOf = (ev) => (typeof ev === 'string' ? ev : (ev?.name || ev?.title || null));
 const normalizeEventNames = (values) => {
@@ -36,11 +40,55 @@ const parseQrEvents = (value) => {
     }
     return [];
 };
-const canonicalPaymentStatus = (value) => {
+const hasPositiveAmount = (value) => Number(value || 0) > 0;
+const canonicalPaymentStatus = (value, amount = 0) => {
     const normalized = String(value || '').toLowerCase();
-    if (value === true || normalized === 'paid' || normalized === 'captured') return 'Paid';
+    if (value === true || normalized === 'paid' || normalized === 'captured') {
+        return hasPositiveAmount(amount) ? 'Paid' : 'Pending';
+    }
     if (normalized === 'failed') return 'Failed';
     return 'Pending';
+};
+const getPaymentStatusRank = (value, amount = 0) => {
+    const status = canonicalPaymentStatus(value, amount);
+    if (status === 'Paid') return 3;
+    if (status === 'Pending') return 2;
+    if (status === 'Failed') return 1;
+    return 0;
+};
+const getComparableTime = (...values) => {
+    for (const value of values) {
+        if (!value) continue;
+        const timestamp = new Date(value).getTime();
+        if (Number.isFinite(timestamp)) return timestamp;
+    }
+    return 0;
+};
+const comparePaymentAttempts = (left, right) => {
+    const statusDiff =
+        getPaymentStatusRank(right?.status, right?.amount) -
+        getPaymentStatusRank(left?.status, left?.amount);
+    if (statusDiff !== 0) return statusDiff;
+
+    const timeDiff =
+        getComparableTime(right?.updatedAt, right?.createdAt) -
+        getComparableTime(left?.updatedAt, left?.createdAt);
+    if (timeDiff !== 0) return timeDiff;
+
+    return Number(right?.amount || 0) - Number(left?.amount || 0);
+};
+const compareRegistrationAttempts = (left, right) => {
+    const statusDiff =
+        getPaymentStatusRank(right?.payment?.paymentStatus || right?.status, right?.payment?.amount) -
+        getPaymentStatusRank(left?.payment?.paymentStatus || left?.status, left?.payment?.amount);
+    if (statusDiff !== 0) return statusDiff;
+
+    const timeDiff =
+        getComparableTime(right?.updatedAt, right?.createdAt, right?.registeredOn) -
+        getComparableTime(left?.updatedAt, left?.createdAt, left?.registeredOn);
+    if (timeDiff !== 0) return timeDiff;
+
+    return Number(right?.payment?.amount || 0) - Number(left?.payment?.amount || 0);
 };
 const parsePaymentEvents = (value) => {
     if (Array.isArray(value)) return value;
@@ -124,7 +172,7 @@ const getAllRegistrations = async (req, res) => {
         // A. Get Users (Filtered - No Admins)
         const tableUsers = await UserData.findAll({
             where: whereUser,
-            attributes: ['id', 'name', 'email', 'participantId', 'phone', 'department', 'year', 'college', 'role', 'isAdmin', 'createdAt', 'lastLogin'],
+            attributes: ['id', 'name', 'email', 'participantId', 'phone', 'department', 'year', 'college', 'role', 'isAdmin', 'accountStatus', 'createdAt', 'lastLogin'],
             order: [['lastLogin', 'DESC'], ['createdAt', 'DESC']],
             raw: false
         });
@@ -180,7 +228,8 @@ const getAllRegistrations = async (req, res) => {
                             department: user.department,
                             year: user.year,
                             college: user.college,
-                            role: user.role
+                            role: user.role,
+                            accountStatus: normalizeAccountStatus(user.accountStatus)
                         }
                         : null,
                     events: parsePaymentEvents(p.events),
@@ -242,6 +291,18 @@ const getAllRegistrations = async (req, res) => {
             }
         });
 
+        const transactionsByEmail = new Map();
+        transactionList.forEach((txn) => {
+            const email = String(txn?.userId || txn?.user?.email || '').trim().toLowerCase();
+            if (!email) return;
+            const attempts = transactionsByEmail.get(email) || [];
+            attempts.push(txn);
+            transactionsByEmail.set(email, attempts);
+        });
+        transactionsByEmail.forEach((attempts, email) => {
+            transactionsByEmail.set(email, [...attempts].sort(comparePaymentAttempts));
+        });
+
         let stats = {
             totalUsers: totalUsersCount,
             activeNow: activeUsersCount,
@@ -251,22 +312,6 @@ const getAllRegistrations = async (req, res) => {
             totalRevenue: 0
         };
 
-        transactionList.forEach((txn) => {
-            const pStatus = canonicalPaymentStatus(txn.status);
-            const amount = parseFloat(txn.amount || 0);
-
-            if (pStatus === 'Paid') {
-                stats.registered++;
-                stats.totalRevenue += amount;
-            }
-            else if (pStatus === 'Failed') {
-                stats.paymentFailed++;
-            }
-            else {
-                stats.pendingPayment++;
-            }
-        });
-
         // 4. Prepare User-Based View (Merged Data)
         for (const user of tableUsers) {
             try { if (!user?.participantId) await assignParticipantIdToUser(user); } catch (e) {}
@@ -274,42 +319,82 @@ const getAllRegistrations = async (req, res) => {
         
         const mergedData = tableUsers.map((userRow) => {
             const user = userRow.get({ plain: true });
+            const userId = String(user?.id || '');
+            const userEmail = String(user?.email || '').toLowerCase();
+            const bestPayment = userEmail ? transactionsByEmail.get(userEmail)?.[0] : null;
             
             // Find all attempts for this user
             const userRecords = registrationAttempts.filter(r => 
-                (r.user && r.user.id.toString() === user.id.toString()) || 
-                (r.userData && r.userData.email === user.email)
+                String(r?.user?.id || '') === userId ||
+                String(r?.userData?.email || r?.user?.email || '').toLowerCase() === userEmail
             );
 
-            // Sort: Paid first, then latest date
-            userRecords.sort((a, b) => {
-                const statusA = (a.payment?.paymentStatus === true || String(a.payment?.paymentStatus).toLowerCase() === 'paid') ? 1 : 0;
-                const statusB = (b.payment?.paymentStatus === true || String(b.payment?.paymentStatus).toLowerCase() === 'paid') ? 1 : 0;
-                return statusB - statusA;
-            });
+            userRecords.sort(compareRegistrationAttempts);
 
             const userReg = userRecords.length > 0 ? userRecords[0] : null;
             const resolvedPid = user.participantId || userReg?.user?.participantId || '-';
-            const paymentStatus = userReg?.payment?.paymentStatus 
-                ? (userReg.payment.paymentStatus === true ? 'Paid' : userReg.payment.paymentStatus) 
-                : 'Pending';
+            const selectedEvents =
+                Array.isArray(userReg?.selectedEvents) && userReg.selectedEvents.length > 0
+                    ? userReg.selectedEvents
+                    : parsePaymentEvents(bestPayment?.events);
+            const paymentAmount = Number(bestPayment?.amount ?? userReg?.payment?.amount ?? 0);
+            const paymentStatus = canonicalPaymentStatus(
+                bestPayment?.status ||
+                userReg?.payment?.paymentStatus ||
+                userReg?.status,
+                paymentAmount
+            );
+            const transactionId =
+                bestPayment?.transactionId ||
+                bestPayment?.razorpayPaymentId ||
+                userReg?.payment?.transactionId ||
+                'N/A';
             
             if (status && status !== 'All' && paymentStatus !== status) return null;
             
             return {
                 _id: userReg ? userReg.id : `temp_${user.id}`,
                 userId: user.id,
-                userData: { ...user, participantId: resolvedPid },
-                selectedEvents: userReg?.selectedEvents || [],
+                userData: { ...user, participantId: resolvedPid, accountStatus: normalizeAccountStatus(user.accountStatus) },
+                selectedEvents,
                 attendance: userReg?.attendance || { day1: false, day2: false, day3: false },
                 payment: {
-                    amount: userReg?.payment?.amount || 0,
+                    amount: paymentAmount,
                     paymentStatus: paymentStatus,
-                    transactionId: userReg?.payment?.transactionId || 'N/A'
+                    transactionId
                 },
-                registeredOn: user.createdAt
+                registeredOn:
+                    userReg?.registeredOn ||
+                    userReg?.createdAt ||
+                    bestPayment?.updatedAt ||
+                    bestPayment?.createdAt ||
+                    user.createdAt,
+                accountStatus: normalizeAccountStatus(user.accountStatus)
             };
         }).filter(Boolean); 
+
+        stats = mergedData.reduce((acc, item) => {
+            const pStatus = canonicalPaymentStatus(item?.payment?.paymentStatus, item?.payment?.amount);
+            const amount = Number(item?.payment?.amount || 0);
+
+            if (pStatus === 'Paid') {
+                acc.registered++;
+                acc.totalRevenue += amount;
+            } else if (pStatus === 'Failed') {
+                acc.paymentFailed++;
+            } else {
+                acc.pendingPayment++;
+            }
+
+            return acc;
+        }, {
+            totalUsers: totalUsersCount,
+            activeNow: activeUsersCount,
+            registered: 0,
+            pendingPayment: 0,
+            paymentFailed: 0,
+            totalRevenue: 0
+        });
         
         res.status(200).json({
             stats,
@@ -554,6 +639,43 @@ const exportRegistrationsToExcel = async (req, res) => {
     res.status(200).json({ message: "Use Frontend Export" });
 };
 
+const updateAccountStatus = async (req, res) => {
+    try {
+        const userId = String(req.body?.userId || '').trim();
+        const email = String(req.body?.email || '').trim().toLowerCase();
+        const requestedStatus = String(req.body?.status || '').trim().toLowerCase();
+
+        if (!VALID_ACCOUNT_STATUSES.includes(requestedStatus)) {
+            return res.status(400).json({ message: "status must be active or inactive" });
+        }
+
+        if (!userId && !email) {
+            return res.status(400).json({ message: "userId or email required" });
+        }
+
+        const where = userId ? { id: userId } : { email };
+        const user = await UserData.findOne({ where });
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const nextStatus = normalizeAccountStatus(requestedStatus);
+        await user.update({ accountStatus: nextStatus });
+        user.accountStatus = nextStatus;
+
+        res.status(200).json({
+            message: "Account status updated",
+            userId: user.id,
+            email: user.email,
+            status: nextStatus
+        });
+    } catch (error) {
+        console.error("Account status update error:", error);
+        res.status(500).json({ message: "Failed to update account status" });
+    }
+};
+
 // --- 11. Verify QR Scan ---
 const verifyQrScan = async (req, res) => {
     try {
@@ -673,6 +795,7 @@ const verifyQrScan = async (req, res) => {
 
 module.exports = { 
     getAllRegistrations, 
+    updateAccountStatus,
     markAttendance, 
     markAttendanceBulk,
     getActiveUsers, 

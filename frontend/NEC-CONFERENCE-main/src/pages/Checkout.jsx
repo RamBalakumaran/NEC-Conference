@@ -40,7 +40,7 @@ const Checkout = () => {
           {cart.length === 0 ? (
             <div className="text-center text-gray-400 py-20 bg-white/5 rounded-xl border border-white/10">
               <p className="text-xl">Your cart is empty.</p>
-              <button onClick={() => navigate('/dashboard')} className="mt-4 text-purple-400 hover:underline">
+              <button onClick={() => navigate('/tracks')} className="mt-4 text-purple-400 hover:underline">
                 Go to Tracks
               </button>
             </div>

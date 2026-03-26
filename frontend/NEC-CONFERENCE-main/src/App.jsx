@@ -8,6 +8,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import AllTracks from './pages/AllTracks'; 
+import Dashboard from './pages/Dashboard';
 import Checkout from './pages/Checkout';
 import Payment from './components/Registration/Payment';
 import PaymentSuccess from './pages/PaymentSuccess';
@@ -33,11 +34,11 @@ function App() {
             <Route index element={<Home />} />
             <Route path="login" element={<Login />} />
             <Route path="signup" element={<Signup />} />
-            {/* support both /dashboard and /tracks for legacy reasons */}
-            <Route path="dashboard" element={<AllTracks />} />
+            <Route path="dashboard" element={<Dashboard />} />
             <Route path="tracks" element={<AllTracks />} />
             <Route path="checkout" element={<Checkout />} />
             <Route path="registration/payment" element={<Payment />} />
+            <Route path="payment-success" element={<PaymentSuccess />} />
             <Route path="keynotes" element={<SpotlightedEvents />} />
             <Route path="contact" element={<Contact />} />
             <Route path="developers" element={<Developers />} />

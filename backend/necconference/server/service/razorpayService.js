@@ -153,8 +153,18 @@ const getRefundDetails = async (refundId) => {
 
 // Check if payment is captured
 const isPaymentCaptured = async (paymentId) => {
+  const normalizedPaymentId = String(paymentId || "").trim();
+
+  if (!normalizedPaymentId) {
+    return {
+      captured: false,
+      skipped: true,
+      error: "Missing Razorpay payment ID",
+    };
+  }
+
   try {
-    const payment = await getRazorpayInstance().payments.fetch(paymentId);
+    const payment = await getRazorpayInstance().payments.fetch(normalizedPaymentId);
     return {
       captured: payment.status === "captured",
       status: payment.status,

@@ -16,27 +16,32 @@ export function Navbar() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // ✅ Update these lines in your Navbar.jsx
-const navItems = [
-  { 
-    name: "Home", 
-    link: "/", 
-    icon: <IconHome className="h-4 w-4 text-white" /> 
-  },
-  
-  ...(user ? [
-    { 
-      name: "Tracks", 
-      link: "/dashboard", 
-      icon: <IconFileText className="h-4 w-4 text-white" /> 
+  const navItems = [
+    {
+      name: "Home",
+      link: "/",
+      icon: <IconHome className="h-4 w-4 text-white" />
     },
-  ] : []),
-
-  { 
-    name: "Contact", 
-    link: "/contact", 
-    icon: <IconPhone className="h-4 w-4 text-white" /> 
-  },
-];
+    ...(user
+      ? [
+          {
+            name: "Profile",
+            link: "/dashboard",
+            icon: <IconFileText className="h-4 w-4 text-white" />
+          },
+          {
+            name: "Tracks",
+            link: "/tracks",
+            icon: <IconBook2 className="h-4 w-4 text-white" />
+          },
+        ]
+      : []),
+    {
+      name: "Contact",
+      link: "/contact",
+      icon: <IconPhone className="h-4 w-4 text-white" />
+    },
+  ];
 
   // Helper to handle navigation and close drawer
   const handleNavigation = (path) => {
@@ -111,7 +116,7 @@ const navItems = [
                     </span>
                   )}
                 </div>
-                <div className="flex flex-col items-end leading-tight">
+                <div onClick={() => navigate('/dashboard')} className="flex cursor-pointer flex-col items-end leading-tight">
                   <span className="text-white text-xs font-bold">{user.name.split(' ')[0]}</span>
                   <span className="text-purple-400 text-[10px] uppercase">{user.department}</span>
                 </div>
